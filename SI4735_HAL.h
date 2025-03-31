@@ -7,6 +7,9 @@
 #define GPIO_SI473X GPIO_A
 #define GPIO_SI473X_PIN GPIO_PIN_4
 
+#define GPIO_SI473X_MUTE GPIO_A
+#define GPIO_SI473X_PIN_MUTE GPIO_PIN_4
+
 #include "main.h"
 #include "stm32f0xx_hal.h"
 #include "stdbool.h"

@@ -2808,8 +2808,6 @@ inline void setI2CFastModeCustom(long value = 500000) { Wire.setClock(value); };
  */
 inline void setAudioMuteMcuPin(int8_t pin)
 {
-    audioMuteMcuPin = pin;
-    pinMode(audioMuteMcuPin, OUTPUT);
 };
 
 /**
@@ -2824,7 +2822,7 @@ inline void setAudioMuteMcuPin(int8_t pin)
  */
 inline void setHardwareAudioMute(bool on)
 {
-    digitalWrite(audioMuteMcuPin, on);
+    HAL_GPIO_WritePin(GPIO_SI473X_MUTE, GPIO_SI473X_PIN_MUTE, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
     delayMicroseconds(300);
 }
 
