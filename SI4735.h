@@ -1160,10 +1160,10 @@ void setGpio(uint8_t GPO1LEVEL, uint8_t GPO2LEVEL, uint8_t GPO3LEVEL);
 void setGpioIen(uint8_t STCIEN, uint8_t RSQIEN, uint8_t ERRIEN, uint8_t CTSIEN, uint8_t STCREP, uint8_t RSQREP);
 
 void setup(uint8_t resetPin, uint8_t defaultFunction);
-void setup(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode = SI473X_ANALOG_AUDIO, uint8_t clockType = XOSCEN_CRYSTAL, uint8_t gpo2Enable = 0);
+void setup_t(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable);
 
 void setRefClock(uint16_t refclk);
-void setRefClockPrescaler(uint16_t prescale, uint8_t rclk_sel = 0);
+void setRefClockPrescaler(uint16_t prescale, uint8_t rclk_sel);
 
 int32_t getProperty(uint16_t propertyValue);
 
@@ -1359,15 +1359,6 @@ inline uint16_t getAntennaTuningCapacitor()
 
 void getAutomaticGainControl(); //!<  Queries Automatic Gain Control STATUS
 
-/**
- * @ingroup group17
- * @brief Sets the Avc Am Max Gain to maximum gain (0x7800)
- */
-inline void setAvcAmMaxGain()
-{
-    sendProperty(AM_AUTOMATIC_VOLUME_CONTROL_MAX_GAIN, 0x7800);
-    currentAvcAmMaxGain = 90;
-};
 
 /**
  * @ingroup group17
@@ -1389,7 +1380,7 @@ inline void setAvcAmDefaultGain()
     currentAvcAmMaxGain = DEFAULT_CURRENT_AVC_AM_MAX_GAIN;
 };
 
-void setAvcAmMaxGain(uint8_t gain = 90); //!<  Sets the maximum gain for automatic volume control.
+void setAvcAmMaxGain(uint8_t gain); //!<  Sets the maximum gain for automatic volume control.
 
 /**
  * @ingroup group17
@@ -1413,7 +1404,7 @@ inline uint8_t getCurrentAvcAmMaxGain()
  *
  * @param smattn Maximum attenuation to apply when in soft mute
  */
-inline void setAmSoftMuteMaxAttenuation(uint8_t smattn = 0)
+inline void setAmSoftMuteMaxAttenuation(uint8_t smattn)
 {
     sendProperty(AM_SOFT_MUTE_MAX_ATTENUATION, smattn);
 };
@@ -1427,7 +1418,7 @@ inline void setAmSoftMuteMaxAttenuation(uint8_t smattn = 0)
  * @details You can use setAmSoftMuteMaxAttenuation instead. Same AM property values.
  * @param smattn Maximum attenuation to apply when in soft mute.
  */
-inline void setSsbSoftMuteMaxAttenuation(uint8_t smattn = 0)
+inline void setSsbSoftMuteMaxAttenuation(uint8_t smattn)
 {
     sendProperty(SSB_SOFT_MUTE_MAX_ATTENUATION, smattn);
 };
@@ -1439,7 +1430,7 @@ inline void setSsbSoftMuteMaxAttenuation(uint8_t smattn = 0)
  * @details Sets the number of milliseconds the low IF peak detector must not be exceeded before increasing the gain. Default value is 140 (approximately 40 dB / s).
  * @param param number of milliseconds ( from 4 to 248; step 4); default value 0x008C (140).
  */
-inline void setSsbIfAgcReleaseRate(uint8_t param = 140)
+inline void setSsbIfAgcReleaseRate(uint8_t param)
 {
     sendProperty(SSB_IF_AGC_RELEASE_RATE, param);
 };
@@ -1451,7 +1442,7 @@ inline void setSsbIfAgcReleaseRate(uint8_t param = 140)
  * @details Large values provide slower attack, and smaller values provide faster attack
  * @param param number of milliseconds ( from 4 to 248; step 4); default value 4.
  */
-inline void setSsbIfAgcAttackRate(uint8_t param = 4)
+inline void setSsbIfAgcAttackRate(uint8_t param)
 {
     sendProperty(SSB_IF_AGC_ATTACK_RATE, param);
 };
@@ -1499,9 +1490,9 @@ void setAutomaticGainControl(uint8_t AGCDIS, uint8_t AGCIDX);
  */
 inline void setAGC(uint8_t AGCDIS, uint8_t AGCIDX) { setAutomaticGainControl(AGCDIS, AGCIDX); };
 
-void setSsbAgcOverrite(uint8_t SSBAGCDIS, uint8_t SSBAGCNDX, uint8_t reserved = 0);
+void setSsbAgcOverrite(uint8_t SSBAGCDIS, uint8_t SSBAGCNDX, uint8_t reserved);
 
-void getCurrentReceivedSignalQuality(uint8_t INTACK);
+void getCurrentReceivedSignalQuality_t(uint8_t INTACK);
 void getCurrentReceivedSignalQuality(void);
 
 // AM and FM
@@ -1855,8 +1846,8 @@ void digitalOutputSampleRate(uint16_t DOSR);
 
 void setAudioMute(bool off); // if true mute the audio; else unmute
 
-void setAM();
-void setFM();
+void setAM_t();
+void setFM_t();
 void setAM(uint16_t fromFreq, uint16_t toFreq, uint16_t intialFreq, uint16_t step);
 void setFM(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t step);
 
@@ -1883,7 +1874,7 @@ inline void setFMDeEmphasis(uint8_t parameter)
  *
  * @param smattn Maximum attenuation to apply when in soft mute
  */
-inline void setFmSoftMuteMaxAttenuation(uint8_t smattn = 0)
+inline void setFmSoftMuteMaxAttenuation(uint8_t smattn)
 {
     sendProperty(FM_SOFT_MUTE_MAX_ATTENUATION, smattn);
 };
@@ -1910,8 +1901,11 @@ inline void setFmNoiseBlankThreshold(uint16_t parameter)
  * @param nb_interval Interval in micro-seconds that original samples are replaced by interpolated clean samples. Default value is 55 μs.
  * @param nb_irr_filter Sets the bandwidth of the noise floor estimator. Default value is 300.
  */
-inline void setFmNoiseBlank(uint16_t nb_rate = 64, uint16_t nb_interval = 55, uint16_t nb_irr_filter = 300)
+inline void setFmNoiseBlank()
 {
+		uint16_t nb_rate = 64;
+		uint16_t nb_interval = 55;
+		uint16_t nb_irr_filter = 300;
     sendProperty(FM_NB_RATE, nb_rate);
     sendProperty(FM_NB_INTERVAL, nb_interval);
     sendProperty(FM_NB_IIR_FILTER, nb_irr_filter);
@@ -2130,8 +2124,11 @@ inline void setAMFrontEndAgcControl(uint8_t MIN_GAIN_INDEX, uint8_t ATTN_BACKUP)
  * @param nb_irr_filter Sets the bandwidth of the noise floor estimator. Default value is 300.
  *
  */
-inline void setAmNoiseBlank(uint16_t nb_rate = 64, uint16_t nb_interval = 55, uint16_t nb_irr_filter = 300)
+inline void setAmNoiseBlank()
 {
+		uint16_t nb_rate = 64;
+		uint16_t nb_interval = 55;
+		uint16_t nb_irr_filter = 300;
     sendProperty(AM_NB_RATE, nb_rate);
     sendProperty(AM_NB_INTERVAL, nb_interval);
     sendProperty(AM_NB_IIR_FILTER, nb_irr_filter);
@@ -2186,7 +2183,7 @@ void setBandwidth(uint8_t AMCHFLT, uint8_t AMPLFLT);
  *
  * @param filter_value
  */
-inline void setFmBandwidth(uint8_t filter_value = 0)
+inline void setFmBandwidth(uint8_t filter_value)
 {
     sendProperty(FM_CHANNEL_FILTER, filter_value);
 }
@@ -2277,6 +2274,11 @@ inline void setMaxSeekTime(long time_in_ms)
     maxSeekTime = time_in_ms;
 };
 
+
+
+void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down);
+void seekStationProgress_t(void (*showFunc)(uint16_t f), bool (*stopSeking)(), uint8_t up_down);
+
 /**
  * @ingroup group08 Seek
  *
@@ -2306,8 +2308,7 @@ inline void seekStationDown()
 void seekNextStation();
 void seekPreviousStation();
 
-void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down);
-void seekStationProgress(void (*showFunc)(uint16_t f), bool (*stopSeking)(), uint8_t up_down);
+
 
 // AM Seek property configurations
 void setSeekAmLimits(uint16_t bottom, uint16_t top);
@@ -2381,7 +2382,7 @@ void RdsInit();
  */
 void inline clearRdsBuffer() { RdsInit(); };
 void setRdsIntSource(uint8_t RDSRECV, uint8_t RDSSYNCLOST, uint8_t RDSSYNCFOUND, uint8_t RDSNEWBLOCKA, uint8_t RDSNEWBLOCKB);
-void getRdsStatus(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY);
+void getRdsStatus_t(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY);
 /**
  * @ingroup group16 RDS status
  *
@@ -2391,7 +2392,7 @@ void getRdsStatus(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY);
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 55 and 77
  * @see getRdsStatus
  */
-inline void rdsBeginQuery() { getRdsStatus(0, 0, 0); };
+inline void rdsBeginQuery() { getRdsStatus_t(0, 0, 0); };
 
 /**
  * @ingroup group16 RDS
@@ -2548,7 +2549,7 @@ inline void resetEndIndicatorGroupB()
  */
 inline void getRdsStatus()
 {
-    getRdsStatus(0, 0, 0);
+    getRdsStatus_t(0, 0, 0);
 }
 
 /**
@@ -2559,7 +2560,7 @@ inline void getRdsStatus()
  */
 inline void rdsClearFifo()
 {
-    getRdsStatus(0, 1, 0);
+    getRdsStatus_t(0, 1, 0);
 }
 
 /**
@@ -2570,7 +2571,7 @@ inline void rdsClearFifo()
  */
 inline void rdsClearInterrupt()
 {
-    getRdsStatus(1, 0, 0);
+    getRdsStatus_t(1, 0, 0);
 }
 
 void setRdsConfig(uint8_t RDSEN, uint8_t BLETHA, uint8_t BLETHB, uint8_t BLETHC, uint8_t BLETHD);
@@ -2618,7 +2619,7 @@ inline char *getRdsStationInformation(void) { return getRdsText2B(); };
 
 void mjdConverter(uint32_t mjd, uint32_t *year, uint32_t *month, uint32_t *day);
 char *getRdsTime(void);
-char *getRdsDateTime(void);
+//char *getRdsDateTime(void);
 bool getRdsDateTime(uint16_t *year, uint16_t *month, uint16_t *day, uint16_t *hour, uint16_t *minute);
 
 void getNext2Block(char *);
@@ -2626,7 +2627,7 @@ void getNext4Block(char *);
 
 void setSSBBfo(int offset);
 void setSSBConfig(uint8_t AUDIOBW, uint8_t SBCUTFLT, uint8_t AVC_DIVIDER, uint8_t AVCEN, uint8_t SMUTESEL, uint8_t DSP_AFCDIS);
-void setSSB(uint16_t fromFreq, uint16_t toFreq, uint16_t intialFreq, uint16_t step, uint8_t usblsb);
+void setSSB_t(uint16_t fromFreq, uint16_t toFreq, uint16_t intialFreq, uint16_t step, uint8_t usblsb);
 void setSSB(uint8_t usblsb);
 void setSSBAudioBandwidth(uint8_t AUDIOBW);
 void setSSBAutomaticVolumeControl(uint8_t AVCEN);
@@ -2644,7 +2645,7 @@ void setSSBAvcDivider(uint8_t AVC_DIVIDER);
 void setSSBDspAfc(uint8_t DSP_AFCDIS);
 void setSSBSoftMute(uint8_t SMUTESEL);
 
-void setNBFM();
+void setNBFM_t();
 void setNBFM(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t step);
 void patchPowerUpNBFM();
 void loadPatchNBFM(const uint8_t *patch_content, const uint16_t patch_content_size);
@@ -2654,8 +2655,8 @@ si47x_firmware_query_library queryLibraryId();
 void patchPowerUp();
 bool downloadPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_content_size);
 bool downloadCompressedPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_content_size, const uint16_t *cmd_0x15, const int16_t cmd_0x15_size);
-void loadPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_content_size, uint8_t ssb_audiobw = 1);
-void loadCompressedPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_content_size, const uint16_t *cmd_0x15, const int16_t cmd_0x15_size, uint8_t ssb_audiobw = 1);
+void loadPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_content_size, uint8_t ssb_audiobw);
+void loadCompressedPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_content_size, const uint16_t *cmd_0x15, const int16_t cmd_0x15_size, uint8_t ssb_audiobw);
 si4735_eeprom_patch_header downloadPatchFromEeprom(int eeprom_i2c_address);
 void ssbPowerUp();
 
@@ -2742,13 +2743,13 @@ inline uint16_t getCurrentFrequency()
  * @brief Gets the current status  of the Si47XX (AM, FM or SSB)
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 73 (FM) and 139 (AM)
  */
-inline void getStatus()
+inline void getStatus_t()
 {
     getStatus(0, 1);
 }
 
 void setDeviceI2CAddress(uint8_t senPin);
-int16_t getDeviceI2CAddress(uint8_t resetPin);
+int16_t getDeviceI2CAddress();
 void setDeviceOtherI2CAddress(uint8_t i2cAddr);
 
 /*******************************************************************************
@@ -2763,7 +2764,7 @@ void setDeviceOtherI2CAddress(uint8_t i2cAddr);
  */
 inline void setI2CLowSpeedMode(void)
 {
-    Wire.setClock(10000);
+//    Wire.setClock(10000);
 };
 
 /**
@@ -2771,7 +2772,9 @@ inline void setI2CLowSpeedMode(void)
  *
  * @brief Sets I2C bus to 100kHz
  */
-inline void setI2CStandardMode(void) { Wire.setClock(100000); };
+inline void setI2CStandardMode(void) { 
+//Wire.setClock(100000); 
+};
 
 /**
  * @ingroup group18 MCU I2C Speed
@@ -2780,7 +2783,7 @@ inline void setI2CStandardMode(void) { Wire.setClock(100000); };
  */
 inline void setI2CFastMode(void)
 {
-    Wire.setClock(400000);
+//    Wire.setClock(400000);
 };
 
 /**
@@ -2791,7 +2794,9 @@ inline void setI2CFastMode(void)
  *
  * @param value in Hz. For example: The values 500000 sets the bus to 500kHz.
  */
-inline void setI2CFastModeCustom(long value = 500000) { Wire.setClock(value); };
+inline void setI2CFastModeCustom(long value) { 
+//Wire.setClock(value); 
+};
 
 /**
  * @ingroup group18 MCU External Audio Mute
@@ -2826,7 +2831,7 @@ inline void setHardwareAudioMute(bool on)
     delayMicroseconds(300);
 }
 
-void convertToChar(uint16_t value, char *strValue, uint8_t len, uint8_t dot, uint8_t separator, bool remove_leading_zeros = true);
+void convertToChar(uint16_t value, char *strValue, uint8_t len, uint8_t dot, uint8_t separator, bool remove_leading_zeros);
 void removeUnwantedChar(char *str, int size);
 
 #endif // _SI4735_H

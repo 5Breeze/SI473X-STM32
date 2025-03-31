@@ -26,8 +26,8 @@ si47x_status getInterruptStatus()
     SI473X_write(GET_INT_STATUS);
     SI473X_endTransmission();
 
-    Wire.requestFrom(deviceAddress, length);
-    status.raw = Wire.read();
+    SI473X_requestFrom(deviceAddress, 1);
+    status.raw = SI473X_read();
 
     return status;
 }
@@ -505,10 +505,8 @@ void setRefClockPrescaler(uint16_t prescale, uint8_t rclk_sel)
  * @param clockType 0 = Use external RCLK (crystal oscillator disabled); 1 = Use crystal oscillator
  * @param gpo2Enable GPO2OE (GPO2 Output) 1 = Enable; 0 Disable (defult)
  */
-void setup(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable)
+void setup_t(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable)
 {
-    SI473X_begin();
-
     resetPin = resetPin;
     ctsIntEnable = (ctsIntEnable != 0) ? 1 : 0; // Keeps old versions of the sketches running
     gpo2Enable = gpo2Enable;
@@ -547,7 +545,7 @@ void setup(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint
  */
 void setup(uint8_t resetPin, uint8_t defaultFunction)
 {
-    setup(resetPin, 0, defaultFunction, SI473X_ANALOG_AUDIO, XOSCEN_CRYSTAL, 0);
+    setup_t(resetPin, 0, defaultFunction, SI473X_ANALOG_AUDIO, XOSCEN_CRYSTAL, 0);
     HAL_Delay(250);
 }
 
@@ -691,7 +689,7 @@ void frequencyDown()
  *
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); page 129.
  */
-void setAM()
+void setAM_t()
 {
     // If you’re already using AM mode, it is not necessary to call powerDown and radioPowerUp.
     // The other properties also should have the same value as the previous status.
@@ -716,7 +714,7 @@ void setAM()
  *
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); page 64.
  */
-void setFM()
+void setFM_t()
 {
     powerDown();
     setPowerUp(ctsIntEnable, gpo2Enable, 0, currentClockType, FM_CURRENT_MODE, currentAudioMode);
@@ -756,7 +754,7 @@ void setAM(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t st
     if (initialFreq < fromFreq || initialFreq > toFreq)
         initialFreq = fromFreq;
 
-    setAM();
+    setAM_t();
     currentWorkFrequency = initialFreq;
     setFrequency(currentWorkFrequency);
 }
@@ -793,7 +791,7 @@ void setFM(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t st
     if (initialFreq < fromFreq || initialFreq > toFreq)
         initialFreq = fromFreq;
 
-    setFM();
+    setFM_t();
 
     currentWorkFrequency = initialFreq;
     setFrequency(currentWorkFrequency);
@@ -1041,7 +1039,7 @@ void setAvcAmMaxGain(uint8_t gain)
  *        0 = Interrupt status preserved;
  *        1 = Clears RSQINT, BLENDINT, SNRHINT, SNRLINT, RSSIHINT, RSSILINT, MULTHINT, MULTLINT.
  */
-void getCurrentReceivedSignalQuality(uint8_t INTACK)
+void getCurrentReceivedSignalQuality_t(uint8_t INTACK)
 {
     uint8_t arg;
     uint8_t cmd;
@@ -1095,7 +1093,7 @@ void getCurrentReceivedSignalQuality(uint8_t INTACK)
  */
 void getCurrentReceivedSignalQuality(void)
 {
-    getCurrentReceivedSignalQuality(0);
+    getCurrentReceivedSignalQuality_t(0);
 }
 
 /**
@@ -1207,7 +1205,7 @@ void seekPreviousStation()
 void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down)
 {
     si47x_frequency freq;
-    long elapsed_seek = millis();
+    uint32_t elapsed_seek = millis();
 
     // seek command does not work for SSB
     if (lastMode == SSB_CURRENT_MODE)
@@ -1259,10 +1257,10 @@ void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down)
  * @param stopSeeking functionthat you have to implement if you want to control the stop seeking action. Useful if you want abort the seek process.
  * @param up_down   set up_down = 1 for seeking station up; set up_down = 0 for seeking station down
  */
-void seekStationProgress(void (*showFunc)(uint16_t f), bool (*stopSeking)(), uint8_t up_down)
+void seekStationProgress_t(void (*showFunc)(uint16_t f), bool (*stopSeking)(), uint8_t up_down)
 {
     si47x_frequency freq;
-    long elapsed_seek = millis();
+    uint32_t elapsed_seek = millis();
 
     // seek command does not work for SSB
     if (lastMode == SSB_CURRENT_MODE)
@@ -1429,7 +1427,7 @@ void sendCommand(uint8_t cmd, int parameter_size, const uint8_t *parameter)
     // Sends the command to the device
     SI473X_write(cmd);
     // Sends the argments (parameters) of the command
-    for (byte i = 0; i < parameter_size; i++)
+    for (uint8_t i = 0; i < parameter_size; i++)
         SI473X_write(parameter[i]);
     SI473X_endTransmission();
 }
@@ -1450,7 +1448,7 @@ void getCommandResponse(int response_size, uint8_t *response)
     // Asks the device to return a given number o bytes response
     SI473X_requestFrom(deviceAddress, response_size);
     // Gets response information
-    for (byte i = 0; i < response_size; i++)
+    for (uint8_t i = 0; i < response_size; i++)
         response[i] = SI473X_read();
 }
 
@@ -1973,7 +1971,7 @@ void setRdsIntSource(uint8_t RDSRECV, uint8_t RDSSYNCLOST, uint8_t RDSSYNCFOUND,
  *                   0 = Data in BLOCKA, BLOCKB, BLOCKC, BLOCKD, and BLE contain the oldest data in the RDS FIFO.
  *                   1 = Data in BLOCKA will contain the last valid block A data received for the cur- rent station. Data in BLOCKB will contain the last valid block B data received for the current station. Data in BLE will describe the bit errors for the data in BLOCKA and BLOCKB.
  */
-void getRdsStatus(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY)
+void getRdsStatus_t(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY)
 {
     si47x_rds_command rds_cmd;
     static uint16_t lastFreq;
@@ -2549,81 +2547,81 @@ bool getRdsDateTime(uint16_t *rYear, uint16_t *rMonth, uint16_t *rDay, uint16_t 
     return false;
 }
 
-/**
- * @ingroup group16 RDS Time and Date
- * @brief Gets the RDS the Time and Date when the Group type is 4
- * @details Returns the Date, UTC Time and offset (to convert it to local time)
- * @details return examples:
- * @details                 2021-07-29 12:31 +03:00
- * @details                 1964-05-09 21:59 -02:30
- *
- * @return array of char yy-mm-dd hh:mm +/-hh:mm offset
- */
-char *getRdsDateTime()
-{
-    si47x_rds_date_time dt;
+///**
+// * @ingroup group16 RDS Time and Date
+// * @brief Gets the RDS the Time and Date when the Group type is 4
+// * @details Returns the Date, UTC Time and offset (to convert it to local time)
+// * @details return examples:
+// * @details                 2021-07-29 12:31 +03:00
+// * @details                 1964-05-09 21:59 -02:30
+// *
+// * @return array of char yy-mm-dd hh:mm +/-hh:mm offset
+// */
+//char *getRdsDateTime()
+//{
+//    si47x_rds_date_time dt;
 
-    uint16_t minute;
-    uint16_t hour;
-    uint32_t mjd, day, month, year;
+//    uint16_t minute;
+//    uint16_t hour;
+//    uint32_t mjd, day, month, year;
 
-    if (getRdsGroupType() == 4)
-    {
-        char offset_sign;
-        int offset_h;
-        int offset_m;
+//    if (getRdsGroupType() == 4)
+//    {
+//        char offset_sign;
+//        int offset_h;
+//        int offset_m;
 
-        dt.raw[4] = currentRdsStatus.resp.BLOCKBL;
-        dt.raw[5] = currentRdsStatus.resp.BLOCKBH;
-        dt.raw[2] = currentRdsStatus.resp.BLOCKCL;
-        dt.raw[3] = currentRdsStatus.resp.BLOCKCH;
-        dt.raw[0] = currentRdsStatus.resp.BLOCKDL;
-        dt.raw[1] = currentRdsStatus.resp.BLOCKDH;
+//        dt.raw[4] = currentRdsStatus.resp.BLOCKBL;
+//        dt.raw[5] = currentRdsStatus.resp.BLOCKBH;
+//        dt.raw[2] = currentRdsStatus.resp.BLOCKCL;
+//        dt.raw[3] = currentRdsStatus.resp.BLOCKCH;
+//        dt.raw[0] = currentRdsStatus.resp.BLOCKDL;
+//        dt.raw[1] = currentRdsStatus.resp.BLOCKDH;
 
-        // Unfortunately the resource below was necessary dues to  the GCC compiler on 32-bit platform.
-        // See si47x_rds_date_time (typedef union) and CGG “Crosses boundary” issue/features.
-        // Now it is working on Atmega328, STM32, Arduino DUE, ESP32 and more.
+//        // Unfortunately the resource below was necessary dues to  the GCC compiler on 32-bit platform.
+//        // See si47x_rds_date_time (typedef union) and CGG “Crosses boundary” issue/features.
+//        // Now it is working on Atmega328, STM32, Arduino DUE, ESP32 and more.
 
-        mjd |= dt.refined.mjd;
+//        mjd |= dt.refined.mjd;
 
-        minute = dt.refined.minute;
-        hour = dt.refined.hour;
+//        minute = dt.refined.minute;
+//        hour = dt.refined.hour;
 
-        // calculates the jd (Year, Month and Day) base on mjd number
-        mjdConverter(mjd, &year, &month, &day);
+//        // calculates the jd (Year, Month and Day) base on mjd number
+//        mjdConverter(mjd, &year, &month, &day);
 
-        // Calculating hour, minute and offset
-        offset_sign = (dt.refined.offset_sense == 1) ? '+' : '-';
-        offset_h = (dt.refined.offset * 30) / 60;
-        offset_m = (dt.refined.offset * 30) - (offset_h * 60);
+//        // Calculating hour, minute and offset
+//        offset_sign = (dt.refined.offset_sense == 1) ? '+' : '-';
+//        offset_h = (dt.refined.offset * 30) / 60;
+//        offset_m = (dt.refined.offset * 30) - (offset_h * 60);
 
-        // Converting the result to array char -
-        // Using convertToChar instead sprintf to save space (about 1.2K on ATmega328 compiler tools).
+//        // Converting the result to array char -
+//        // Using convertToChar instead sprintf to save space (about 1.2K on ATmega328 compiler tools).
 
-        if (offset_h > 12 || offset_m > 60 || hour > 24 || minute > 60 || day > 31 || month > 12)
-            return NULL;
+//        if (offset_h > 12 || offset_m > 60 || hour > 24 || minute > 60 || day > 31 || month > 12)
+//            return NULL;
 
-        convertToChar(year, rds_time, 4, 0, ' ', false);
-        rds_time[4] = '-';
-        convertToChar(month, &rds_time[5], 2, 0, ' ', false);
-        rds_time[7] = '-';
-        convertToChar(day, &rds_time[8], 2, 0, ' ', false);
-        rds_time[10] = ' ';
-        convertToChar(hour, &rds_time[11], 2, 0, ' ', false);
-        rds_time[13] = ':';
-        convertToChar(minute, &rds_time[14], 2, 0, ' ', false);
-        rds_time[16] = ' ';
-        rds_time[17] = offset_sign;
-        convertToChar(offset_h, &rds_time[18], 2, 0, ' ', false);
-        rds_time[20] = ':';
-        convertToChar(offset_m, &rds_time[21], 2, 0, ' ', false);
-        rds_time[23] = '\0';
+//        convertToChar(year, rds_time, 4, 0, ' ', false);
+//        rds_time[4] = '-';
+//        convertToChar(month, &rds_time[5], 2, 0, ' ', false);
+//        rds_time[7] = '-';
+//        convertToChar(day, &rds_time[8], 2, 0, ' ', false);
+//        rds_time[10] = ' ';
+//        convertToChar(hour, &rds_time[11], 2, 0, ' ', false);
+//        rds_time[13] = ':';
+//        convertToChar(minute, &rds_time[14], 2, 0, ' ', false);
+//        rds_time[16] = ' ';
+//        rds_time[17] = offset_sign;
+//        convertToChar(offset_h, &rds_time[18], 2, 0, ' ', false);
+//        rds_time[20] = ':';
+//        convertToChar(offset_m, &rds_time[21], 2, 0, ' ', false);
+//        rds_time[23] = '\0';
 
-        return rds_time;
-    }
+//        return rds_time;
+//    }
 
-    return NULL;
-}
+//    return NULL;
+//}
 
 /**
  * @defgroup group17 Si4735-D60 Single Side Band (SSB) support
@@ -2905,7 +2903,7 @@ void setSSB(uint8_t usblsb)
  *               value 2 (banary 10) = USB;
  *               value 1 (banary 01) = LSB.
  */
-void setSSB(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t step, uint8_t usblsb)
+void setSSB_t(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t step, uint8_t usblsb)
 {
     currentMinimumFrequency = fromFreq;
     currentMaximumFrequency = toFreq;
@@ -3148,7 +3146,7 @@ bool downloadPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_co
         SI473X_beginTransmission(deviceAddress);
         for (uint16_t i = 0; i < 8; i++)
         {
-            content = pgm_read_byte_near(ssb_patch_content + (i + offset));
+            content = ssb_patch_content[i + offset];
             SI473X_write(content);
         }
         SI473X_endTransmission();
@@ -3238,7 +3236,7 @@ bool downloadCompressedPatch(const uint8_t *ssb_patch_content, const uint16_t ss
         cmd = 0x16;
         for (uint16_t i = 0; i < cmd_0x15_size / sizeof(uint16_t); i++)
         {
-            if (pgm_read_word_near(cmd_0x15 + i) == command_line)
+            if (cmd_0x15[i]== command_line)
             { // it needs performance improvement: save the last "i" value to be used next time
                 cmd = 0x15;
                 break;
@@ -3248,7 +3246,7 @@ bool downloadCompressedPatch(const uint8_t *ssb_patch_content, const uint16_t ss
         SI473X_write(cmd);
         for (uint16_t i = 0; i < 7; i++)
         {
-            content = pgm_read_byte_near(ssb_patch_content + (i + offset));
+            content = ssb_patch_content[i + offset];
             SI473X_write(content);
         }
         SI473X_endTransmission();
@@ -3365,7 +3363,8 @@ si4735_eeprom_patch_header downloadPatchFromEeprom(int eeprom_i2c_address)
         }
 
         SI473X_beginTransmission(deviceAddress);
-        SI473X_write(bufferAux, 8);
+				SI473X_write_string(bufferAux,8);
+//					SI473X_write(bufferAux, 8);
         SI473X_endTransmission();
 
         waitToSend();
@@ -3554,7 +3553,7 @@ void loadPatchNBFM(const uint8_t *patch_content, const uint16_t patch_content_si
  * @see setFrequencyStep()
  * @see void setFrequency(uint16_t freq)
  */
-void setNBFM()
+void setNBFM_t()
 {
     // Is it needed to load patch when switch to SSB?
     // powerDown();
@@ -3594,7 +3593,7 @@ void setNBFM(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t 
     if (initialFreq < fromFreq || initialFreq > toFreq)
         initialFreq = fromFreq;
 
-    setNBFM();
+    setNBFM_t();
 
     currentWorkFrequency = initialFreq;
     setFrequency(currentWorkFrequency);
