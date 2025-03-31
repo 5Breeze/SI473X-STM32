@@ -159,7 +159,7 @@ void setGpioIen(uint8_t STCIEN, uint8_t RSQIEN, uint8_t ERRIEN, uint8_t CTSIEN, 
  *
  * @return int16_t 0x11   if the SEN pin of the Si47XX is low or 0x63 if the SEN pin of the Si47XX is HIGH or 0x0 if error.
  */
-int16_t getDeviceI2CAddress(uint8_t resetPin)
+int16_t getDeviceI2CAddress()
 {
     HAL_StatusTypeDef status;
 
