@@ -155,7 +155,6 @@ void setGpioIen(uint8_t STCIEN, uint8_t RSQIEN, uint8_t ERRIEN, uint8_t CTSIEN, 
  * @details SEN PIN is configured to ground (GND) or you are using the SI4732 and tnhe SEN PIN is configured to Vcc.
  * @details Use this function if you do not know how the SEN pin is configured.
  *
- * @param uint8_t  resetPin MCU Mater (Arduino) reset pin
  *
  * @return int16_t 0x11   if the SEN pin of the Si47XX is low or 0x63 if the SEN pin of the Si47XX is HIGH or 0x0 if error.
  */
@@ -498,16 +497,14 @@ void setRefClockPrescaler(uint16_t prescale, uint8_t rclk_sel)
  * ATTENTION: The document AN383; "Si47XX ANTENNA, SCHEMATIC, LAYOUT, AND DESIGN GUIDELINES"; rev 0.8; page 6; there is the following note:
  *            Crystal and digital audio mode cannot be used at the same time. Populate R1 and remove C10, C11, and X1 when using digital audio.
  *
- * @param resetPin Digital Arduino Pin used to RESET de Si47XX device.
  * @param ctsIntEnable CTS Interrupt Enable.
  * @param defaultFunction is the mode you want the receiver starts.
  * @param audioMode default SI473X_ANALOG_AUDIO (Analog Audio). Use SI473X_ANALOG_AUDIO or SI473X_DIGITAL_AUDIO.
  * @param clockType 0 = Use external RCLK (crystal oscillator disabled); 1 = Use crystal oscillator
  * @param gpo2Enable GPO2OE (GPO2 Output) 1 = Enable; 0 Disable (defult)
  */
-void setup_t(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable)
+void setup_t(uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable)
 {
-    resetPin = resetPin;
     ctsIntEnable = (ctsIntEnable != 0) ? 1 : 0; // Keeps old versions of the sketches running
     gpo2Enable = gpo2Enable;
     currentAudioMode = audioMode;
@@ -540,12 +537,11 @@ void setup_t(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, ui
  * @details If the audio mode parameter is not entered, analog mode will be considered.
  * @details You can use any Arduino digital pin. Be sure you are using less than 3.6V on Si47XX RST pin.
  *
- * @param uint8_t resetPin Digital Arduino Pin used to RESET command.
  * @param uint8_t defaultFunction. 0 =  FM mode; 1 = AM
  */
-void setup(uint8_t resetPin, uint8_t defaultFunction)
+void setup(uint8_t defaultFunction)
 {
-    setup_t(resetPin, 0, defaultFunction, SI473X_ANALOG_AUDIO, XOSCEN_CRYSTAL, 0);
+    setup_t(0, defaultFunction, SI473X_ANALOG_AUDIO, XOSCEN_CRYSTAL, 0);
     HAL_Delay(250);
 }
 

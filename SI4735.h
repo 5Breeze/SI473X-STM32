@@ -1062,7 +1062,6 @@ uint16_t maxDelayAfterPouwerUp = MAX_DELAY_AFTER_POWERUP;      //!< Stores the m
 unsigned long maxSeekTime = MAX_SEEK_TIME;                     //!< Stores the maximum time (ms) for a seeking process. Defines the maximum seeking time.
 
 uint8_t lastTextFlagAB;
-uint8_t resetPin; //!<  pin used on Arduino Board to RESET the Si47XX device
 
 uint8_t currentTune; //!<  tell the current tune (FM, AM or SSB)
 
@@ -1159,8 +1158,8 @@ void setGpioCtl(uint8_t GPO1OEN, uint8_t GPO2OEN, uint8_t GPO3OEN);
 void setGpio(uint8_t GPO1LEVEL, uint8_t GPO2LEVEL, uint8_t GPO3LEVEL);
 void setGpioIen(uint8_t STCIEN, uint8_t RSQIEN, uint8_t ERRIEN, uint8_t CTSIEN, uint8_t STCREP, uint8_t RSQREP);
 
-void setup(uint8_t resetPin, uint8_t defaultFunction);
-void setup_t(uint8_t resetPin, uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable);
+void setup(uint8_t defaultFunction);
+void setup_t(uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable);
 
 void setRefClock(uint16_t refclk);
 void setRefClockPrescaler(uint16_t prescale, uint8_t rclk_sel);
