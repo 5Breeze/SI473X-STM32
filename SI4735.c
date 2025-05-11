@@ -1,4 +1,107 @@
-#include <SI4735.h>
+#include "SI4735.h"
+
+/**********************************************************************
+ * SI4735 Class definition
+ **********************************************************************/
+
+/**
+ * @brief SI4735 Class
+ *
+ * @details This class implements all functions to help you to control the Si47XX devices.
+ * This library was built based on “Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0)”.
+ * It also can be used on all members of the SI473X family respecting, of course, the features available
+ * for each IC version.  These functionalities can be seen in the comparison matrix shown in
+ * table 1 (Product Family Function); pages 2 and 3 of the programming guide.
+ *
+ * @author PU2CLR - Ricardo Lima Caratti
+ */
+char rds_buffer2A[65]; //!<  RDS Radio Text buffer - Program Information
+char rds_buffer2B[33]; //!<  RDS Radio Text buffer - Station Informaation
+char rds_buffer0A[9];  //!<  RDS Basic tuning and switching information (Type 0 groups)
+char rds_time[25];     //!<  RDS date time received information
+
+int rdsTextAdress2A; //!<  rds_buffer2A current position
+int rdsTextAdress2B; //!<  rds_buffer2B current position
+int rdsTextAdress0A; //!<  rds_buffer0A current position
+
+bool rdsEndGroupA = false;
+bool rdsEndGroupB = false;
+
+int16_t deviceAddress = SI473X_ADDR_SEN_LOW; //!<  Stores the current I2C bus address.
+
+// Delays
+uint16_t maxDelaySetFrequency = MAX_DELAY_AFTER_SET_FREQUENCY; //!< Stores the maximum delay after set frequency command (in ms).
+uint16_t maxDelayAfterPouwerUp = MAX_DELAY_AFTER_POWERUP;      //!< Stores the maximum delay you have to setup after a power up command (in ms).
+unsigned long maxSeekTime = MAX_SEEK_TIME;                     //!< Stores the maximum time (ms) for a seeking process. Defines the maximum seeking time.
+
+uint8_t lastTextFlagAB;
+uint8_t resetPin; //!<  pin used on Arduino Board to RESET the Si47XX device
+
+uint8_t currentTune; //!<  tell the current tune (FM, AM or SSB)
+
+uint16_t currentMinimumFrequency; //!<  minimum frequency of the current band
+uint16_t currentMaximumFrequency; //!<  maximum frequency of the current band
+uint16_t currentWorkFrequency;    //!<  current frequency
+
+uint16_t currentStep; //!<  Stores the current step used to increment or decrement the frequency.
+
+uint8_t lastMode = -1; //!<  Stores the last mode used.
+
+uint8_t currentAvcAmMaxGain = DEFAULT_CURRENT_AVC_AM_MAX_GAIN; //!<  Stores the current Automatic Volume Control Gain for AM.
+uint8_t currentClockType = XOSCEN_CRYSTAL;                     //!< Stores the current clock type used (Crystal or REF CLOCK)
+uint8_t ctsIntEnable = 0;
+uint8_t gpo2Enable = 0;
+
+uint16_t refClock = 32768;     //!< Frequency of Reference Clock in Hz.
+uint16_t refClockPrescale = 1; //!< Prescaler for Reference Clock (divider).
+uint8_t refClockSourcePin = 0; //!< 0 = RCLK pin is clock source; 1 = DCLK pin is clock source.
+
+si47x_frequency currentFrequency; //!<  data structure to get current frequency
+si47x_set_frequency currentFrequencyParams;
+si47x_rqs_status currentRqsStatus;       //!<  current Radio SIgnal Quality status
+si47x_response_status currentStatus;     //!<  current device status
+si47x_firmware_information firmwareInfo; //!<  firmware information
+si47x_rds_status currentRdsStatus;       //!<  current RDS status
+si47x_agc_status currentAgcStatus;       //!<  current AGC status
+si47x_ssb_mode currentSSBMode;           //!<  indicates if USB or LSB
+
+si473x_powerup powerUp;
+
+uint8_t volume = 32; //!< Stores the current vlume setup (0-63).
+
+uint8_t currentAudioMode = SI473X_ANALOG_AUDIO; //!< Current audio mode used (ANALOG or DIGITAL or both)
+uint8_t currentSsbStatus = 0;
+int8_t audioMuteMcuPin = -1;
+
+const uint16_t size_content = sizeof(ssb_patch_content); // see ssb_patch_content in patch_full.h or patch_init.h
+
+//---------------------------------------------------------------------------------------------
+void SI4735_write(uint8_t *data, size_t len)
+{
+	i2cWrite(data, len, deviceAddress);
+}
+void SI4735_write_to(uint8_t *data, size_t len, uint16_t to)
+{
+	i2cWriteTo(data, len, deviceAddress, to);
+}
+void SI4735_read(uint8_t *data, size_t len)
+{
+	i2cRead(data, len, deviceAddress);
+}
+void SI4735_read_from(uint8_t *data, size_t len, uint16_t from)
+{
+	i2cReadFrom(data, len, deviceAddress, from);
+}
+void SI4735_setStep(uint16_t s)
+{
+	currentStep = s;
+}
+uint16_t SI4735_getStep()
+{
+	return currentStep;
+}
+//---------------------------------------------------------------------------------------------
+
 /** @defgroup group05 Deal with Interrupt and I2C bus */
 
 /**
@@ -22,12 +125,9 @@ si47x_status getInterruptStatus()
 
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(GET_INT_STATUS);
-    SI473X_endTransmission();
-
-    SI473X_requestFrom(deviceAddress, 1);
-    status.raw = SI473X_read();
+    uint8_t byte = GET_INT_STATUS;
+    SI4735_write(&byte, 1);
+    SI4735_read(&status.raw, 1);
 
     return status;
 }
@@ -65,10 +165,8 @@ void setGpioCtl(uint8_t GPO1OEN, uint8_t GPO2OEN, uint8_t GPO3OEN)
 
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(GPIO_CTL);
-    SI473X_write(gpio.raw);
-    SI473X_endTransmission();
+    uint8_t dat[] = {GPIO_CTL, gpio.raw};
+    SI4735_write(dat, sizeof(dat));
 }
 
 /**
@@ -104,10 +202,8 @@ void setGpio(uint8_t GPO1LEVEL, uint8_t GPO2LEVEL, uint8_t GPO3LEVEL)
 
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(GPIO_SET);
-    SI473X_write(gpio.raw);
-    SI473X_endTransmission();
+    uint8_t dat[] = {GPIO_SET, gpio.raw};
+    SI4735_write(dat, sizeof(dat));
 }
 
 /**
@@ -155,6 +251,7 @@ void setGpioIen(uint8_t STCIEN, uint8_t RSQIEN, uint8_t ERRIEN, uint8_t CTSIEN, 
  * @details SEN PIN is configured to ground (GND) or you are using the SI4732 and tnhe SEN PIN is configured to Vcc.
  * @details Use this function if you do not know how the SEN pin is configured.
  *
+ * @param uint8_t  resetPin MCU Mater (Arduino) reset pin
  *
  * @return int16_t 0x11   if the SEN pin of the Si47XX is low or 0x63 if the SEN pin of the Si47XX is HIGH or 0x0 if error.
  */
@@ -248,11 +345,13 @@ void reset()
  */
 void waitToSend()
 {
+		uint8_t temp;
     do
     {
-        delayMicroseconds(MIN_DELAY_WAIT_SEND_LOOP); // Need check the minimum value.
-        SI473X_requestFrom(deviceAddress, 1);
-    } while (!(SI473X_read() & 0B10000000));
+        HAL_Delay(1);
+				SI4735_read(&temp, 1);
+
+    } while (!(temp & 0B10000000));
 }
 
 /** @defgroup group07 Device Setup and Start up */
@@ -336,13 +435,9 @@ void setPowerUp(uint8_t CTSIEN, uint8_t GPO2OEN, uint8_t PATCH, uint8_t XOSCEN, 
  */
 void radioPowerUp(void)
 {
-    // delayMicroseconds(1000);
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(POWER_UP);
-    SI473X_write(powerUp.raw[0]); // Content of ARG1
-    SI473X_write(powerUp.raw[1]); // COntent of ARG2
-    SI473X_endTransmission();
+    uint8_t dat[] = {POWER_UP, powerUp.raw[0], powerUp.raw[1]};
+    SI4735_write(dat, sizeof(dat));
     // Delay at least 500 ms between powerup command and first tune command to wait for
     // the oscillator to stabilize if XOSCEN is set and crystal is used as the RCLK.
     waitToSend();
@@ -391,10 +486,9 @@ void powerDown(void)
         setHardwareAudioMute(true);
 
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(POWER_DOWN);
-    SI473X_endTransmission();
-    delayMicroseconds(2500);
+    uint8_t byte = POWER_DOWN;
+    SI4735_write(&byte, 1);
+    HAL_Delay(3);
 }
 
 /**
@@ -410,17 +504,14 @@ void getFirmware(void)
 {
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(GET_REV);
-    SI473X_endTransmission();
+    uint8_t byte = GET_REV;
+    SI4735_write(&byte, 1);
 
     do
     {
-        waitToSend();
+    	waitToSend();
         // Request for 9 bytes response
-        SI473X_requestFrom(deviceAddress, 9);
-        for (int i = 0; i < 9; i++)
-            firmwareInfo.raw[i] = SI473X_read();
+    	SI4735_read(firmwareInfo.raw, 9);
     } while (firmwareInfo.resp.ERR);
 }
 
@@ -497,6 +588,7 @@ void setRefClockPrescaler(uint16_t prescale, uint8_t rclk_sel)
  * ATTENTION: The document AN383; "Si47XX ANTENNA, SCHEMATIC, LAYOUT, AND DESIGN GUIDELINES"; rev 0.8; page 6; there is the following note:
  *            Crystal and digital audio mode cannot be used at the same time. Populate R1 and remove C10, C11, and X1 when using digital audio.
  *
+ * @param resetPin Digital Arduino Pin used to RESET de Si47XX device.
  * @param ctsIntEnable CTS Interrupt Enable.
  * @param defaultFunction is the mode you want the receiver starts.
  * @param audioMode default SI473X_ANALOG_AUDIO (Analog Audio). Use SI473X_ANALOG_AUDIO or SI473X_DIGITAL_AUDIO.
@@ -537,6 +629,7 @@ void setup_t(uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, u
  * @details If the audio mode parameter is not entered, analog mode will be considered.
  * @details You can use any Arduino digital pin. Be sure you are using less than 3.6V on Si47XX RST pin.
  *
+ * @param uint8_t resetPin Digital Arduino Pin used to RESET command.
  * @param uint8_t defaultFunction. 0 =  FM mode; 1 = AM
  */
 void setup(uint8_t defaultFunction)
@@ -623,17 +716,18 @@ void setFrequency(uint16_t freq)
         currentFrequencyParams.arg.FREEZE = 0;                // Used just on FM
     }
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(currentTune);
-    SI473X_write(currentFrequencyParams.raw[0]); // Send a byte with FAST and  FREEZE information; if not FM must be 0;
-    SI473X_write(currentFrequencyParams.arg.FREQH);
-    SI473X_write(currentFrequencyParams.arg.FREQL);
-    SI473X_write(currentFrequencyParams.arg.ANTCAPH);
-    // If current tune is not FM sent one more byte
-    if (currentTune == AM_TUNE_FREQ) // if AM or SSB
-        SI473X_write(currentFrequencyParams.arg.ANTCAPL);
-
-    SI473X_endTransmission();
+    uint8_t dat[] = {
+    		currentTune,
+			currentFrequencyParams.raw[0],
+			currentFrequencyParams.arg.FREQH,
+			currentFrequencyParams.arg.FREQL,
+			currentFrequencyParams.arg.ANTCAPH,
+			currentFrequencyParams.arg.ANTCAPL
+    };
+    size_t len = sizeof(dat);
+    if (currentTune != AM_TUNE_FREQ) len--;
+    SI4735_write(dat, len);
+		
     waitToSend();                    // Wait for the si473x is ready.
     currentWorkFrequency = freq;     // check it
     HAL_Delay(maxDelaySetFrequency); // For some reason I need to delay here.
@@ -833,15 +927,10 @@ void setBandwidth(uint8_t AMCHFLT, uint8_t AMPLFLT)
     filter.param.AMPLFLT = AMPLFLT;
 
     waitToSend();
-    volume = volume;
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SET_PROPERTY);
-    SI473X_write(0x00);                  // Always 0x00
-    SI473X_write(property.raw.byteHigh); // High byte first
-    SI473X_write(property.raw.byteLow);  // Low byte after
-    SI473X_write(filter.raw[1]);         // Raw data for AMCHFLT and
-    SI473X_write(filter.raw[0]);         // AMPLFLT
-    SI473X_endTransmission();
+		
+    uint8_t dat[] = {SET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow, filter.raw[1], filter.raw[0]};
+    SI4735_write(dat, sizeof(dat));
+		
     waitToSend();
 }
 
@@ -898,19 +987,16 @@ void getStatus(uint8_t INTACK, uint8_t CANCEL)
     status.arg.CANCEL = CANCEL;
     status.arg.RESERVED2 = 0;
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(cmd);
-    SI473X_write(status.raw);
-    SI473X_endTransmission();
+    uint8_t dat[] = {cmd, status.raw};
+    SI4735_write(dat, sizeof(dat));
     // Reads the current status (including current frequency).
     do
     {
-        waitToSend();
-        SI473X_requestFrom(deviceAddress, limitResp); // Check it
-        // Gets response information
-        for (uint8_t i = 0; i < limitResp; i++)
-            currentStatus.raw[i] = SI473X_read();
-    } while (currentStatus.resp.ERR); // If error, try it again
+    	waitToSend();
+
+    	SI4735_read(currentStatus.raw, limitResp);
+    } while (currentStatus.resp.ERR); // If error, try it again*/
+
     waitToSend();
 }
 
@@ -943,18 +1029,14 @@ void getAutomaticGainControl()
     }
 
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(cmd);
-    SI473X_endTransmission();
+    SI4735_write(&cmd, 1);
 
     do
     {
-        waitToSend();
-        SI473X_requestFrom(deviceAddress, 3);
-        currentAgcStatus.raw[0] = SI473X_read(); // STATUS response
-        currentAgcStatus.raw[1] = SI473X_read(); // RESP 1
-        currentAgcStatus.raw[2] = SI473X_read(); // RESP 2
-    } while (currentAgcStatus.refined.ERR); // If error, try get AGC status again.
+    	waitToSend();
+    	SI4735_read(currentAgcStatus.raw, 3);
+    } while (currentAgcStatus.refined.ERR);    // If error, try get AGC status again.
+
 }
 
 /**
@@ -994,11 +1076,8 @@ void setAutomaticGainControl(uint8_t AGCDIS, uint8_t AGCIDX)
 
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(cmd);
-    SI473X_write(agc.raw[0]);
-    SI473X_write(agc.raw[1]);
-    SI473X_endTransmission();
+    uint8_t dat[] = {cmd, agc.raw[0], agc.raw[1]};
+    SI4735_write(dat, sizeof(dat));
 
     waitToSend();
 }
@@ -1060,19 +1139,20 @@ void getCurrentReceivedSignalQuality_t(uint8_t INTACK)
     waitToSend();
 
     arg = INTACK;
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(cmd);
-    SI473X_write(arg); // send B00000001
-    SI473X_endTransmission();
+		
+    uint8_t dat[] = {cmd, arg};
+    SI4735_write(dat, sizeof(dat));
 
     // Check it
     // do
     //{
     waitToSend();
-    SI473X_requestFrom(deviceAddress, sizeResponse);
+		
+		SI4735_read(currentRqsStatus.raw, sizeResponse);  
+//    SI473X_requestFrom(deviceAddress, sizeResponse);
     // Gets response information
-    for (uint8_t i = 0; i < sizeResponse; i++)
-        currentRqsStatus.raw[i] = SI473X_read();
+//    for (uint8_t i = 0; i < sizeResponse; i++)
+//        currentRqsStatus.raw[i] = SI473X_read();
     //} while (currentRqsStatus.resp.ERR); // Try again if error found
 }
 
@@ -1118,22 +1198,16 @@ void seekStation(uint8_t SEEKUP, uint8_t WRAP)
     seek.arg.RESERVED1 = 0;
     seek.arg.RESERVED2 = 0;
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(seek_start_cmd);
-    SI473X_write(seek.raw); // ARG1
-
-    if (seek_start_cmd == AM_SEEK_START) // Sets additional configuration for AM mode
-    {
-        seek_am_complement.ARG2 = seek_am_complement.ARG3 = 0;
-        seek_am_complement.ANTCAPH = 0;
-        seek_am_complement.ANTCAPL = (currentWorkFrequency > 1800) ? 1 : 0; // if SW = 1
-        SI473X_write(seek_am_complement.ARG2);                              // ARG2 - Always 0
-        SI473X_write(seek_am_complement.ARG3);                              // ARG3 - Always 0
-        SI473X_write(seek_am_complement.ANTCAPH);                           // ARG4 - Tuning Capacitor: The tuning capacitor value
-        SI473X_write(seek_am_complement.ANTCAPL);                           // ARG5 - will be selected automatically.
-    }
-
-    SI473X_endTransmission();
+    uint8_t dat[] = {
+    		seek_start_cmd,
+    		seek.raw,
+			seek_am_complement.ARG2 = seek_am_complement.ARG3 = 0,
+			seek_am_complement.ANTCAPH = 0,
+			seek_am_complement.ANTCAPL = (currentWorkFrequency > 1800) ? 1 : 0
+    };
+    size_t len = 2;
+    if (seek_start_cmd == AM_SEEK_START) len = sizeof(dat);
+    SI4735_write(dat, len);
     HAL_Delay(MAX_DELAY_AFTER_SET_FREQUENCY << 2);
 }
 
@@ -1201,7 +1275,7 @@ void seekPreviousStation()
 void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down)
 {
     si47x_frequency freq;
-    uint32_t elapsed_seek = millis();
+    uint32_t elapsed_seek = _millis();
 
     // seek command does not work for SSB
     if (lastMode == SSB_CURRENT_MODE)
@@ -1217,7 +1291,7 @@ void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down)
         currentWorkFrequency = freq.value;
         if (showFunc != NULL)
             showFunc(freq.value);
-    } while (!currentStatus.resp.VALID && !currentStatus.resp.BLTF && (millis() - elapsed_seek) < maxSeekTime);
+    } while (!currentStatus.resp.VALID && !currentStatus.resp.BLTF && (_millis() - elapsed_seek) < maxSeekTime);
 }
 
 /**
@@ -1256,7 +1330,7 @@ void seekStationProgress(void (*showFunc)(uint16_t f), uint8_t up_down)
 void seekStationProgress_t(void (*showFunc)(uint16_t f), bool (*stopSeking)(), uint8_t up_down)
 {
     si47x_frequency freq;
-    uint32_t elapsed_seek = millis();
+    uint32_t elapsed_seek = _millis();
 
     // seek command does not work for SSB
     if (lastMode == SSB_CURRENT_MODE)
@@ -1276,7 +1350,7 @@ void seekStationProgress_t(void (*showFunc)(uint16_t f), bool (*stopSeking)(), u
             if (stopSeking())
                 return;
 
-    } while (!currentStatus.resp.VALID && !currentStatus.resp.BLTF && (millis() - elapsed_seek) < maxSeekTime);
+    } while (!currentStatus.resp.VALID && !currentStatus.resp.BLTF && (_millis() - elapsed_seek) < maxSeekTime);
 }
 
 /**
@@ -1392,15 +1466,9 @@ void sendProperty(uint16_t propertyNumber, uint16_t parameter)
     property.value = propertyNumber;
     param.value = parameter;
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SET_PROPERTY);
-    SI473X_write(0x00);
-    SI473X_write(property.raw.byteHigh); // Send property - High byte - most significant first
-    SI473X_write(property.raw.byteLow);  // Send property - Low byte - less significant after
-    SI473X_write(param.raw.byteHigh);    // Send the argments. High Byte - Most significant first
-    SI473X_write(param.raw.byteLow);     // Send the argments. Low Byte - Less significant after
-    SI473X_endTransmission();
-    delayMicroseconds(550);
+    uint8_t dat[] = {SET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow, param.raw.byteHigh, param.raw.byteLow};
+    SI4735_write(dat, sizeof(dat));
+    HAL_Delay(1);
 }
 
 /**
@@ -1419,13 +1487,13 @@ void sendProperty(uint16_t propertyNumber, uint16_t parameter)
 void sendCommand(uint8_t cmd, int parameter_size, const uint8_t *parameter)
 {
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    // Sends the command to the device
-    SI473X_write(cmd);
-    // Sends the argments (parameters) of the command
-    for (uint8_t i = 0; i < parameter_size; i++)
-        SI473X_write(parameter[i]);
-    SI473X_endTransmission();
+    uint8_t *dat = (uint8_t *)calloc(1, parameter_size + 1);
+    if (dat) {
+    	*dat = cmd;
+    	memcpy(dat + 1, parameter, parameter_size);
+        SI4735_write(dat, parameter_size + 1);
+        free(dat);
+    }
 }
 
 /**
@@ -1441,11 +1509,7 @@ void sendCommand(uint8_t cmd, int parameter_size, const uint8_t *parameter)
 void getCommandResponse(int response_size, uint8_t *response)
 {
     waitToSend();
-    // Asks the device to return a given number o bytes response
-    SI473X_requestFrom(deviceAddress, response_size);
-    // Gets response information
-    for (uint8_t i = 0; i < response_size; i++)
-        response[i] = SI473X_read();
+	SI4735_read(response, response_size);
 }
 
 /**
@@ -1462,8 +1526,7 @@ si47x_status getStatusResponse()
 {
     si47x_status status;
 
-    SI473X_requestFrom(deviceAddress, 1);
-    status.raw = SI473X_read();
+    SI4735_read(&status.raw, 1);
 
     return status;
 }
@@ -1491,26 +1554,22 @@ getProperty(uint16_t propertyNumber)
 
     property.value = propertyNumber;
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(GET_PROPERTY);
-    SI473X_write(0x00);
-    SI473X_write(property.raw.byteHigh); // Send property - High byte - most significant first
-    SI473X_write(property.raw.byteLow);  // Send property - Low byte - less significant after
-    SI473X_endTransmission();
+    uint8_t dat[] = {GET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow};
+    SI4735_write(dat, sizeof(dat));
 
     waitToSend();
-    SI473X_requestFrom(deviceAddress, 4);
-    status.raw = SI473X_read();
+    SI4735_read(dat, 4);
+    status.raw = dat[0];
 
     // if error, return 0;
     if (status.refined.ERR == 1)
         return -1;
 
-    SI473X_read(); // dummy
+    //SI473X_read(); // dummy
 
     // gets the property value
-    property.raw.byteHigh = SI473X_read();
-    property.raw.byteLow = SI473X_read();
+    property.raw.byteHigh = dat[2];//Wire.read();
+    property.raw.byteLow = dat[3];//Wire.read();
 
     return property.value;
 }
@@ -1677,15 +1736,9 @@ void setFmStereoOn()
  */
 void disableFmDebug()
 {
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(0x12);
-    SI473X_write(0x00);
-    SI473X_write(0xFF);
-    SI473X_write(0x00);
-    SI473X_write(0x00);
-    SI473X_write(0x00);
-    SI473X_endTransmission();
-    delayMicroseconds(2500);
+    uint8_t dat[] = {0x12, 0, 0xff, 0, 0, 0};
+    SI4735_write(dat, sizeof(dat));
+    HAL_Delay(3);
 }
 
 /** @defgroup group13 Audio setup */
@@ -1895,15 +1948,9 @@ void setRdsConfig(uint8_t RDSEN, uint8_t BLETHA, uint8_t BLETHB, uint8_t BLETHC,
     config.arg.BLETHD = BLETHD;
     config.arg.DUMMY1 = 0;
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SET_PROPERTY);
-    SI473X_write(0x00);                  // Always 0x00 (I need to check it)
-    SI473X_write(property.raw.byteHigh); // Send property - High byte - most significant first
-    SI473X_write(property.raw.byteLow);  // Low byte
-    SI473X_write(config.raw[1]);         // Send the argments. Most significant first
-    SI473X_write(config.raw[0]);
-    SI473X_endTransmission();
-    delayMicroseconds(550);
+    uint8_t dat[] = {SET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow, config.raw[1], config.raw[0]};
+    SI4735_write(dat, sizeof(dat));
+    HAL_Delay(1);
 
     RdsInit();
 }
@@ -1943,14 +1990,8 @@ void setRdsIntSource(uint8_t RDSRECV, uint8_t RDSSYNCLOST, uint8_t RDSSYNCFOUND,
 
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SET_PROPERTY);
-    SI473X_write(0x00);                  // Always 0x00 (I need to check it)
-    SI473X_write(property.raw.byteHigh); // Send property - High byte - most significant first
-    SI473X_write(property.raw.byteLow);  // Low byte
-    SI473X_write(rds_int_source.raw[1]); // Send the argments. Most significant first
-    SI473X_write(rds_int_source.raw[0]);
-    SI473X_endTransmission();
+    uint8_t dat[] = {SET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow, rds_int_source.raw[1], rds_int_source.raw[0]};
+    SI4735_write(dat, sizeof(dat));
     waitToSend();
 }
 
@@ -1989,20 +2030,11 @@ void getRdsStatus_t(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY)
     rds_cmd.arg.MTFIFO = MTFIFO;
     rds_cmd.arg.STATUSONLY = STATUSONLY;
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(FM_RDS_STATUS);
-    SI473X_write(rds_cmd.raw);
-    SI473X_endTransmission();
+    uint8_t dat[] = {FM_RDS_STATUS, rds_cmd.raw};
+    SI4735_write(dat, sizeof(dat));
 
-    do
-    {
-        waitToSend();
-        // Gets response information
-        SI473X_requestFrom(deviceAddress, 13);
-        for (uint8_t i = 0; i < 13; i++)
-            currentRdsStatus.raw[i] = SI473X_read();
-    } while (currentRdsStatus.resp.ERR);
-    delayMicroseconds(550);
+   SI4735_read(currentRdsStatus.raw, 13);
+    HAL_Delay(1);
 }
 
 // See inlines methods / functions on SI4735.h
@@ -2689,16 +2721,10 @@ void setSSBBfo(int offset)
     property.value = SSB_BFO;
     bfo_offset.value = offset;
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SET_PROPERTY);
-    SI473X_write(0x00);                  // Always 0x00
-    SI473X_write(property.raw.byteHigh); // High byte first
-    SI473X_write(property.raw.byteLow);  // Low byte after
-    SI473X_write(bfo_offset.raw.FREQH);  // Offset freq. high byte first
-    SI473X_write(bfo_offset.raw.FREQL);  // Offset freq. low byte first
-
-    SI473X_endTransmission();
-    delayMicroseconds(550);
+    uint8_t dat[] = {SET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow, bfo_offset.raw.FREQH, bfo_offset.raw.FREQL};
+    SI4735_write(dat, sizeof(dat));
+		
+    HAL_Delay(1);
 }
 
 /**
@@ -2912,7 +2938,6 @@ void setSSB_t(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t
 
     currentWorkFrequency = initialFreq;
     setFrequency(currentWorkFrequency);
-    // delayMicroseconds(550);
 }
 
 /**
@@ -2925,16 +2950,9 @@ void sendSSBModeProperty()
     si47x_property property;
     property.value = SSB_MODE;
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SET_PROPERTY);
-    SI473X_write(0x00);                  // Always 0x00
-    SI473X_write(property.raw.byteHigh); // High byte first
-    SI473X_write(property.raw.byteLow);  // Low byte after
-    SI473X_write(currentSSBMode.raw[1]); // SSB MODE params; freq. high byte first
-    SI473X_write(currentSSBMode.raw[0]); // SSB MODE params; freq. low byte after
-
-    SI473X_endTransmission();
-    delayMicroseconds(550);
+    uint8_t dat[] = {SET_PROPERTY, 0, property.raw.byteHigh, property.raw.byteLow, currentSSBMode.raw[1], currentSSBMode.raw[0]};
+    SI4735_write(dat, sizeof(dat));
+    HAL_Delay(1);
 }
 
 /**
@@ -2950,16 +2968,12 @@ void getSsbAgcStatus()
 {
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SSB_AGC_STATUS);
-    SI473X_endTransmission();
+    uint8_t byte = SSB_AGC_STATUS;
+    SI4735_write(&byte, 1);
     do
     {
         waitToSend();
-        SI473X_requestFrom(deviceAddress, 3);
-        currentAgcStatus.raw[0] = SI473X_read(); // STATUS response
-        currentAgcStatus.raw[1] = SI473X_read(); // RESP 1
-        currentAgcStatus.raw[2] = SI473X_read(); // RESP 2
+    	SI4735_read(&currentAgcStatus.raw[0], 3);
     } while (currentAgcStatus.refined.ERR); // If error, try get AGC status again.
 }
 
@@ -2983,11 +2997,8 @@ void setSsbAgcOverrite(uint8_t SSBAGCDIS, uint8_t SSBAGCNDX, uint8_t reserved)
 
     waitToSend();
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(SSB_AGC_OVERRIDE);
-    SI473X_write(agc.raw[0]);
-    SI473X_write(agc.raw[1]);
-    SI473X_endTransmission();
+    uint8_t dat[] = {SSB_AGC_OVERRIDE, agc.raw[0], agc.raw[1]};
+    SI4735_write(dat, sizeof(dat));
 
     waitToSend();
 }
@@ -3027,21 +3038,16 @@ si47x_firmware_query_library queryLibraryId()
     // HAL_Delay(500);
 
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(POWER_UP);
-    SI473X_write(0b00011111);          // Set to Read Library ID, disable interrupt; disable GPO2OEN; boot normaly; enable External Crystal Oscillator  .
-    SI473X_write(SI473X_ANALOG_AUDIO); // Set to Analog Line Input.
-    SI473X_endTransmission();
+    uint8_t dat[] = {POWER_UP, 0x1f, SI473X_ANALOG_AUDIO};
+    SI4735_write(dat, sizeof(dat));
 
     do
     {
         waitToSend();
-        SI473X_requestFrom(deviceAddress, 8);
-        for (int i = 0; i < 8; i++)
-            libraryID.raw[i] = SI473X_read();
+        SI4735_read(libraryID.raw, 8);
     } while (libraryID.resp.ERR); // If error found, try it again.
 
-    delayMicroseconds(2500);
+    HAL_Delay(3);
 
     return libraryID;
 }
@@ -3062,11 +3068,8 @@ si47x_firmware_query_library queryLibraryId()
 void patchPowerUp()
 {
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(POWER_UP);
-    SI473X_write(0b00110001);          // This is a condition for loading the patch: Set to AM, Enable External Crystal Oscillator; Set patch enable; GPO2 output disabled; CTS interrupt disabled. You can change this calling setSSB.
-    SI473X_write(SI473X_ANALOG_AUDIO); // This is a condition for loading the patch: Set to Analog Output. You can change this calling setSSB.
-    SI473X_endTransmission();
+    uint8_t dat[] = {POWER_UP, 0x31, SI473X_ANALOG_AUDIO};
+    SI4735_write(dat, sizeof(dat));
     HAL_Delay(maxDelayAfterPouwerUp);
 }
 
@@ -3078,12 +3081,9 @@ void patchPowerUp()
 void ssbPowerUp()
 {
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(POWER_UP);
-    SI473X_write(0b00010001); // This is a condition for loading the patch: Set to AM, Enable External Crystal Oscillator; Set patch enable; GPO2 output disabled; CTS interrupt disabled. You can change this calling setSSB.
-    SI473X_write(0b00000101); // This is a condition for loading the patch: Set to Analog Output. You can change this calling setSSB.
-    SI473X_endTransmission();
-    delayMicroseconds(2500);
+    uint8_t dat[] = {POWER_UP, 0x11, 5};
+    SI4735_write(dat, sizeof(dat));
+    HAL_Delay(3);
 
     powerUp.arg.CTSIEN = ctsIntEnable;     // 1 -> Interrupt anabled;
     powerUp.arg.GPO2OEN = 0;               // 1 -> GPO2 Output Enable;
@@ -3139,23 +3139,18 @@ bool downloadPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_co
     // Send patch to the SI4735 device
     for (uint16_t offset = 0; offset < ssb_patch_content_size; offset += 8)
     {
-        SI473X_beginTransmission(deviceAddress);
-        for (uint16_t i = 0; i < 8; i++)
-        {
-            content = ssb_patch_content[i + offset];
-            SI473X_write(content);
-        }
-        SI473X_endTransmission();
+    	SI4735_write((uint8_t *)(ssb_patch_content + offset), 8);
+
 
         // Testing download performance
         // approach 1 - Faster - less secure (it might crash in some architectures)
-        delayMicroseconds(MIN_DELAY_WAIT_SEND_LOOP); // Need check the minimum value
+        HAL_Delay(1); // Need check the minimum value
 
         // approach 2 - More control. A little more secure than approach 1
         /*
         do
         {
-            delayMicroseconds(150); // Minimum delay founded (Need check the minimum value)
+            delayM7icroseconds(150); // Minimum delay founded (Need check the minimum value)
             SI473X_requestFrom(deviceAddress, 1);
         } while (!(SI473X_read() & B10000000));
         */
@@ -3176,7 +3171,7 @@ bool downloadPatch(const uint8_t *ssb_patch_content, const uint16_t ssb_patch_co
            return false;
         */
     }
-    delayMicroseconds(250);
+    HAL_Delay(1);
     return true;
 }
 
@@ -3238,18 +3233,19 @@ bool downloadCompressedPatch(const uint8_t *ssb_patch_content, const uint16_t ss
                 break;
             }
         }
-        SI473X_beginTransmission(deviceAddress);
-        SI473X_write(cmd);
+				
+				uint8_t dat[8];
+				dat[0] = cmd;
         for (uint16_t i = 0; i < 7; i++)
         {
-            content = ssb_patch_content[i + offset];
-            SI473X_write(content);
+            dat[i+1] = ssb_patch_content[i + offset];
         }
-        SI473X_endTransmission();
-        delayMicroseconds(MIN_DELAY_WAIT_SEND_LOOP); // Need check the minimum value
+				SI4735_write(dat, sizeof(dat));
+
+        HAL_Delay(1); // Need check the minimum value
         command_line++;
     }
-    delayMicroseconds(250);
+    HAL_Delay(1);
     return true;
 }
 
@@ -3328,45 +3324,36 @@ si4735_eeprom_patch_header downloadPatchFromEeprom(int eeprom_i2c_address)
     int offset, i;
 
     // Gets the EEPROM patch header information
-    SI473X_beginTransmission(eeprom_i2c_address);
-    SI473X_write(0x00); // offset Most significant Byte
-    SI473X_write(0x00); // offset Less significant Byte
-    SI473X_endTransmission();
+     // Gets the EEPROM patch header information
+    uint8_t dat[] = {0,0};
+    SI4735_write_to(dat, sizeof(dat), eeprom_i2c_address);
+
     HAL_Delay(5);
 
     // The first two bytes of the header will be ignored.
-    for (int k = 0; k < header_size; k += 8)
-    {
-        SI473X_requestFrom(eeprom_i2c_address, 8);
-        for (int i = k; i < (k + 8); i++)
-            eep.raw[i] = SI473X_read();
+    for (int k = 0; k < header_size; k += 8) {
+        i = k * 8;
+        SI4735_read_from(&eep.raw[i], 8, eeprom_i2c_address);
     }
+
 
     // Transferring patch from EEPROM to SI4735 device
     offset = header_size;
-    for (i = 0; i < (int)eep.refined.patch_size; i += 8)
-    {
+    for (i = 0; i < (int)eep.refined.patch_size; i += 8) {
         // Reads patch content from EEPROM
-        SI473X_beginTransmission(eeprom_i2c_address);
-        SI473X_write((int)offset >> 8);   // header_size >> 8 wil be always 0 in this case
-        SI473X_write((int)offset & 0XFF); // offset Less significant Byte
-        SI473X_endTransmission();
+        uint8_t dat[] = {offset >> 8, offset & 0xFF};
+        SI4735_write_to(dat, sizeof(dat), eeprom_i2c_address);
 
-        SI473X_requestFrom(eeprom_i2c_address, 8);
-        for (int j = 0; j < 8; j++)
-        {
-            bufferAux[j] = SI473X_read();
-        }
+        SI4735_read_from(bufferAux, 8, eeprom_i2c_address);
 
-        SI473X_beginTransmission(deviceAddress);
-				SI473X_write_string(bufferAux,8);
-//					SI473X_write(bufferAux, 8);
-        SI473X_endTransmission();
+        SI4735_write(bufferAux, 8);
 
         waitToSend();
+
         uint8_t cmd_status;
-        SI473X_requestFrom(deviceAddress, 1);
-        cmd_status = SI473X_read();
+        // The SI4735 issues a status after each 8 byte transfered.Just the bit 7(CTS)should be seted.if bit 6(ERR)is seted, the system halts.
+        SI4735_read(&cmd_status, 1);
+				
         // The SI4735 issues a status after each 8 byte transfered.Just the bit 7(CTS)should be seted.if bit 6(ERR)is seted, the system halts.
         if (cmd_status != 0x80)
         {
@@ -3509,11 +3496,9 @@ void removeUnwantedChar(char *str, int size)
 void patchPowerUpNBFM()
 {
     waitToSend();
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(POWER_UP);
-    SI473X_write(0b00110000);          // This is a condition for loading the patch: Set to AM, Enable External Crystal Oscillator; Set patch enable; GPO2 output disabled; CTS interrupt disabled.
-    SI473X_write(SI473X_ANALOG_AUDIO); // This is a condition for loading the patch: Set to Analog Output. You can change this calling setNBFM.
-    SI473X_endTransmission();
+    uint8_t dat[] = {POWER_UP, 0x30, SI473X_ANALOG_AUDIO};
+    SI4735_write(dat, sizeof(dat));
+
     HAL_Delay(maxDelayAfterPouwerUp);
 }
 
@@ -3615,12 +3600,9 @@ void setFrequencyNBFM(uint16_t freq)
     currentFrequencyParams.arg.FREQH = currentFrequency.raw.FREQH;
     currentFrequencyParams.arg.FREQL = currentFrequency.raw.FREQL;
 
-    SI473X_beginTransmission(deviceAddress);
-    SI473X_write(0x50);
-    SI473X_write(0x00); // Send a byte with FAST and  FREEZE information; if not FM must be 0;
-    SI473X_write(currentFrequency.raw.FREQH);
-    SI473X_write(currentFrequency.raw.FREQL);
-    SI473X_endTransmission();
+    uint8_t dat[] = {0x50, 0, currentFrequency.raw.FREQH, currentFrequency.raw.FREQL};
+    SI4735_write(dat, sizeof(dat));
+		
     waitToSend();                // Wait for the si473x is ready.
     currentWorkFrequency = freq; // check it
     HAL_Delay(250);              // For some reason I need to delay here.

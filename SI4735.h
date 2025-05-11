@@ -2,6 +2,9 @@
 #define _SI4735_H
 
 #include "SI4735_HAL.h"
+#include "main.h"
+#include <stdlib.h>
+#include "patch_init.h" // SSB patch for whole SSBRX initialization string
 
 #define POWER_UP_FM 0  // FM
 #define POWER_UP_AM 1  // AM and SSB (if patch applyed)
@@ -1042,62 +1045,63 @@ typedef struct
  *
  * @author PU2CLR - Ricardo Lima Caratti
  */
-char rds_buffer2A[65]; //!<  RDS Radio Text buffer - Program Information
-char rds_buffer2B[33]; //!<  RDS Radio Text buffer - Station Informaation
-char rds_buffer0A[9];  //!<  RDS Basic tuning and switching information (Type 0 groups)
-char rds_time[25];     //!<  RDS date time received information
+extern char rds_buffer2A[65]; //!<  RDS Radio Text buffer - Program Information
+extern char rds_buffer2B[33]; //!<  RDS Radio Text buffer - Station Informaation
+extern char rds_buffer0A[9];  //!<  RDS Basic tuning and switching information (Type 0 groups)
+extern char rds_time[25];     //!<  RDS date time received information
 
-int rdsTextAdress2A; //!<  rds_buffer2A current position
-int rdsTextAdress2B; //!<  rds_buffer2B current position
-int rdsTextAdress0A; //!<  rds_buffer0A current position
+extern int rdsTextAdress2A; //!<  rds_buffer2A current position
+extern int rdsTextAdress2B; //!<  rds_buffer2B current position
+extern int rdsTextAdress0A; //!<  rds_buffer0A current position
 
-bool rdsEndGroupA = false;
-bool rdsEndGroupB = false;
+extern bool rdsEndGroupA;
+extern bool rdsEndGroupB;
 
-int16_t deviceAddress = SI473X_ADDR_SEN_LOW; //!<  Stores the current I2C bus address.
+extern int16_t deviceAddress; //!<  Stores the current I2C bus address.
 
 // Delays
-uint16_t maxDelaySetFrequency = MAX_DELAY_AFTER_SET_FREQUENCY; //!< Stores the maximum delay after set frequency command (in ms).
-uint16_t maxDelayAfterPouwerUp = MAX_DELAY_AFTER_POWERUP;      //!< Stores the maximum delay you have to setup after a power up command (in ms).
-unsigned long maxSeekTime = MAX_SEEK_TIME;                     //!< Stores the maximum time (ms) for a seeking process. Defines the maximum seeking time.
+extern uint16_t maxDelaySetFrequency; //!< Stores the maximum delay after set frequency command (in ms).
+extern uint16_t maxDelayAfterPouwerUp;      //!< Stores the maximum delay you have to setup after a power up command (in ms).
+extern unsigned long maxSeekTime;                     //!< Stores the maximum time (ms) for a seeking process. Defines the maximum seeking time.
 
-uint8_t lastTextFlagAB;
+extern uint8_t lastTextFlagAB;
+extern uint8_t resetPin; //!<  pin used on Arduino Board to RESET the Si47XX device
 
-uint8_t currentTune; //!<  tell the current tune (FM, AM or SSB)
+extern uint8_t currentTune; //!<  tell the current tune (FM, AM or SSB)
 
-uint16_t currentMinimumFrequency; //!<  minimum frequency of the current band
-uint16_t currentMaximumFrequency; //!<  maximum frequency of the current band
-uint16_t currentWorkFrequency;    //!<  current frequency
+extern uint16_t currentMinimumFrequency; //!<  minimum frequency of the current band
+extern uint16_t currentMaximumFrequency; //!<  maximum frequency of the current band
+extern uint16_t currentWorkFrequency;    //!<  current frequency
 
-uint16_t currentStep; //!<  Stores the current step used to increment or decrement the frequency.
+extern uint16_t currentStep; //!<  Stores the current step used to increment or decrement the frequency.
 
-uint8_t lastMode = -1; //!<  Stores the last mode used.
+extern uint8_t lastMode; //!<  Stores the last mode used.
 
-uint8_t currentAvcAmMaxGain = DEFAULT_CURRENT_AVC_AM_MAX_GAIN; //!<  Stores the current Automatic Volume Control Gain for AM.
-uint8_t currentClockType = XOSCEN_CRYSTAL;                     //!< Stores the current clock type used (Crystal or REF CLOCK)
-uint8_t ctsIntEnable = 0;
-uint8_t gpo2Enable = 0;
+extern uint8_t currentAvcAmMaxGain; //!<  Stores the current Automatic Volume Control Gain for AM.
+extern uint8_t currentClockType;                     //!< Stores the current clock type used (Crystal or REF CLOCK)
+extern uint8_t ctsIntEnable;
+extern uint8_t gpo2Enable;
 
-uint16_t refClock = 32768;     //!< Frequency of Reference Clock in Hz.
-uint16_t refClockPrescale = 1; //!< Prescaler for Reference Clock (divider).
-uint8_t refClockSourcePin = 0; //!< 0 = RCLK pin is clock source; 1 = DCLK pin is clock source.
+extern uint16_t refClock;     //!< Frequency of Reference Clock in Hz.
+extern uint16_t refClockPrescale; //!< Prescaler for Reference Clock (divider).
+extern uint8_t refClockSourcePin; //!< 0 = RCLK pin is clock source; 1 = DCLK pin is clock source.
 
-si47x_frequency currentFrequency; //!<  data structure to get current frequency
-si47x_set_frequency currentFrequencyParams;
-si47x_rqs_status currentRqsStatus;       //!<  current Radio SIgnal Quality status
-si47x_response_status currentStatus;     //!<  current device status
-si47x_firmware_information firmwareInfo; //!<  firmware information
-si47x_rds_status currentRdsStatus;       //!<  current RDS status
-si47x_agc_status currentAgcStatus;       //!<  current AGC status
-si47x_ssb_mode currentSSBMode;           //!<  indicates if USB or LSB
+extern si47x_frequency currentFrequency; //!<  data structure to get current frequency
+extern si47x_set_frequency currentFrequencyParams;
+extern si47x_rqs_status currentRqsStatus;       //!<  current Radio SIgnal Quality status
+extern si47x_response_status currentStatus;     //!<  current device status
+extern si47x_firmware_information firmwareInfo; //!<  firmware information
+extern si47x_rds_status currentRdsStatus;       //!<  current RDS status
+extern si47x_agc_status currentAgcStatus;       //!<  current AGC status
+extern si47x_ssb_mode currentSSBMode;           //!<  indicates if USB or LSB
 
-si473x_powerup powerUp;
+extern si473x_powerup powerUp;
 
-uint8_t volume = 32; //!< Stores the current vlume setup (0-63).
+extern uint8_t volume; //!< Stores the current vlume setup (0-63).
 
-uint8_t currentAudioMode = SI473X_ANALOG_AUDIO; //!< Current audio mode used (ANALOG or DIGITAL or both)
-uint8_t currentSsbStatus = 0;
-int8_t audioMuteMcuPin = -1;
+extern uint8_t currentAudioMode; //!< Current audio mode used (ANALOG or DIGITAL or both)
+extern uint8_t currentSsbStat;
+extern int8_t audioMuteMcuPin;
 
 void waitInterrupr(void);
 si47x_status getInterruptStatus();
@@ -1115,39 +1119,39 @@ void disableFmDebug();
  * @brief Clear RDS buffer 2A (Radio Text / Program Information)
  * @details same clearRdsProgramInformation
  */
-inline void clearRdsBuffer2A() { memset(rds_buffer2A, 0, sizeof(rds_buffer2A)); };
+static inline void clearRdsBuffer2A() { memset(rds_buffer2A, 0, sizeof(rds_buffer2A)); };
 /**
  * @ingroup group16 RDS setup
  * @brief Clear RDS buffer 2A (Radio Text / Program Information)
  * @details same clearRdsBuffer2A
  */
-inline void clearRdsProgramInformation() { memset(rds_buffer2A, 0, sizeof(rds_buffer2A)); };
+static inline void clearRdsProgramInformation() { memset(rds_buffer2A, 0, sizeof(rds_buffer2A)); };
 
 /**
  * @ingroup group16 RDS setup
  * @brief Clear RDS buffer 2B (text / Station INformation 32 bytes)
  * @details Same clearRdsStationInformation
  */
-inline void clearRdsBuffer2B() { memset(rds_buffer2B, 0, sizeof(rds_buffer2B)); };
+static inline void clearRdsBuffer2B() { memset(rds_buffer2B, 0, sizeof(rds_buffer2B)); };
 /**
  * @ingroup group16 RDS setup
  * @brief Clear RDS buffer 2B (text / Station INformation 32 bytes)
  * @details Same clearRdsBuffer2B
  */
-inline void clearRdsStationInformation() { memset(rds_buffer2B, 0, sizeof(rds_buffer2B)); };
+static inline void clearRdsStationInformation() { memset(rds_buffer2B, 0, sizeof(rds_buffer2B)); };
 
 /**
  * @ingroup group16 RDS setup
  * @brief Clear RDS buffer 0A (text / Station Name)
  * @details clearRdsStationName
  */
-inline void clearRdsBuffer0A() { memset(rds_buffer0A, 0, sizeof(rds_buffer0A)); };
+static inline void clearRdsBuffer0A() { memset(rds_buffer0A, 0, sizeof(rds_buffer0A)); };
 /**
  * @ingroup group16 RDS setup
  * @brief Clear RDS buffer 0A (text / Station Name)
  * @details clearRdsBuffer0A
  */
-inline void clearRdsStationName() { memset(rds_buffer0A, 0, sizeof(rds_buffer0A)); };
+static inline void clearRdsStationName() { memset(rds_buffer0A, 0, sizeof(rds_buffer0A)); };
 
 void getSsbAgcStatus();
 
@@ -1158,7 +1162,7 @@ void setGpioCtl(uint8_t GPO1OEN, uint8_t GPO2OEN, uint8_t GPO3OEN);
 void setGpio(uint8_t GPO1LEVEL, uint8_t GPO2LEVEL, uint8_t GPO3LEVEL);
 void setGpioIen(uint8_t STCIEN, uint8_t RSQIEN, uint8_t ERRIEN, uint8_t CTSIEN, uint8_t STCREP, uint8_t RSQREP);
 
-void setup(uint8_t defaultFunction);
+void setup( uint8_t defaultFunction);
 void setup_t(uint8_t ctsIntEnable, uint8_t defaultFunction, uint8_t audioMode, uint8_t clockType, uint8_t gpo2Enable);
 
 void setRefClock(uint16_t refclk);
@@ -1180,7 +1184,7 @@ int32_t getProperty(uint16_t propertyValue);
  * @param propertyNumber
  * @param param  pamameter value
  */
-inline void setProperty(uint16_t propertyNumber, uint16_t param)
+static inline void setProperty(uint16_t propertyNumber, uint16_t param)
 {
     sendProperty(propertyNumber, param);
 };
@@ -1212,7 +1216,7 @@ uint16_t getFrequency(void);
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 63
  * @return RDSINT status
  */
-inline bool getSignalQualityInterrupt()
+static inline bool getSignalQualityInterrupt()
 {
     return currentStatus.resp.RSQINT;
 };
@@ -1223,7 +1227,7 @@ inline bool getSignalQualityInterrupt()
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); page 63
  * @return RDSINT status
  */
-inline bool getRadioDataSystemInterrupt()
+static inline bool getRadioDataSystemInterrupt()
 {
     return currentStatus.resp.RDSINT;
 };
@@ -1234,7 +1238,7 @@ inline bool getRadioDataSystemInterrupt()
  * @details Seek/Tune Complete Interrupt; 1 = Tune complete has been triggered.
  * @return STCINT status
  */
-inline bool getTuneCompleteTriggered()
+static inline bool getTuneCompleteTriggered()
 {
     return currentStatus.resp.STCINT;
 };
@@ -1245,7 +1249,7 @@ inline bool getTuneCompleteTriggered()
  * @details Return the Error flag (true or false) of status of the least Tune or Seek
  * @return Error flag
  */
-inline bool getStatusError()
+static inline bool getStatusError()
 {
     return currentStatus.resp.ERR;
 };
@@ -1256,7 +1260,7 @@ inline bool getStatusError()
  *
  * @return CTS
  */
-inline bool getStatusCTS() { return currentStatus.resp.CTS; };
+static inline bool getStatusCTS() { return currentStatus.resp.CTS; };
 
 /**
  * @ingroup group08
@@ -1264,7 +1268,7 @@ inline bool getStatusCTS() { return currentStatus.resp.CTS; };
  *
  * @return true
  */
-inline bool getACFIndicator()
+static inline bool getACFIndicator()
 {
     return currentStatus.resp.AFCRL;
 };
@@ -1277,7 +1281,7 @@ inline bool getACFIndicator()
  *
  * @return BLTF
  */
-inline bool getBandLimit()
+static inline bool getBandLimit()
 {
     return currentStatus.resp.BLTF;
 };
@@ -1291,7 +1295,7 @@ inline bool getBandLimit()
  * @return true
  * @return false
  */
-inline bool getStatusValid()
+static inline bool getStatusValid()
 {
     return currentStatus.resp.VALID;
 };
@@ -1302,7 +1306,7 @@ inline bool getStatusValid()
  *
  * @return uint8_t
  */
-inline uint8_t getReceivedSignalStrengthIndicator()
+static inline uint8_t getReceivedSignalStrengthIndicator()
 {
     return currentStatus.resp.RSSI;
 };
@@ -1315,7 +1319,7 @@ inline uint8_t getReceivedSignalStrengthIndicator()
  *
  * @return uint8_t
  */
-inline uint8_t getStatusSNR()
+static inline uint8_t getStatusSNR()
 {
     return currentStatus.resp.SNR;
 };
@@ -1328,7 +1332,7 @@ inline uint8_t getStatusSNR()
  *
  * @return uint8_t
  */
-inline uint8_t getStatusMULT()
+static inline uint8_t getStatusMULT()
 {
     return currentStatus.resp.MULT;
 };
@@ -1342,7 +1346,7 @@ inline uint8_t getStatusMULT()
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 74,74, 140 and 141.
  * @return uint8_t capacitance
  */
-inline uint16_t getAntennaTuningCapacitor()
+static inline uint16_t getAntennaTuningCapacitor()
 {
     si47x_antenna_capacitor cap;
 
@@ -1363,7 +1367,7 @@ void getAutomaticGainControl(); //!<  Queries Automatic Gain Control STATUS
  * @ingroup group17
  * @brief Sets the Avc Am Max Gain to minimal gain (0x1000)
  */
-inline void setAvcAmMinGain()
+static inline void setAvcAmMinGain()
 {
     sendProperty(AM_AUTOMATIC_VOLUME_CONTROL_MAX_GAIN, 0x1000);
     currentAvcAmMaxGain = 12;
@@ -1373,7 +1377,7 @@ inline void setAvcAmMinGain()
  * @ingroup group17
  * @brief Sets the Avc Am Max Gain to default gain (0x2A80)
  */
-inline void setAvcAmDefaultGain()
+static inline void setAvcAmDefaultGain()
 {
     sendProperty(AM_AUTOMATIC_VOLUME_CONTROL_MAX_GAIN, 0x1543);
     currentAvcAmMaxGain = DEFAULT_CURRENT_AVC_AM_MAX_GAIN;
@@ -1387,7 +1391,7 @@ void setAvcAmMaxGain(uint8_t gain); //!<  Sets the maximum gain for automatic vo
  *
  * @return uint8_t Current AVC gain index value
  */
-inline uint8_t getCurrentAvcAmMaxGain()
+static inline uint8_t getCurrentAvcAmMaxGain()
 {
     return currentAvcAmMaxGain;
 };
@@ -1403,7 +1407,7 @@ inline uint8_t getCurrentAvcAmMaxGain()
  *
  * @param smattn Maximum attenuation to apply when in soft mute
  */
-inline void setAmSoftMuteMaxAttenuation(uint8_t smattn)
+static inline void setAmSoftMuteMaxAttenuation(uint8_t smattn)
 {
     sendProperty(AM_SOFT_MUTE_MAX_ATTENUATION, smattn);
 };
@@ -1417,7 +1421,7 @@ inline void setAmSoftMuteMaxAttenuation(uint8_t smattn)
  * @details You can use setAmSoftMuteMaxAttenuation instead. Same AM property values.
  * @param smattn Maximum attenuation to apply when in soft mute.
  */
-inline void setSsbSoftMuteMaxAttenuation(uint8_t smattn)
+static inline void setSsbSoftMuteMaxAttenuation(uint8_t smattn)
 {
     sendProperty(SSB_SOFT_MUTE_MAX_ATTENUATION, smattn);
 };
@@ -1429,7 +1433,7 @@ inline void setSsbSoftMuteMaxAttenuation(uint8_t smattn)
  * @details Sets the number of milliseconds the low IF peak detector must not be exceeded before increasing the gain. Default value is 140 (approximately 40 dB / s).
  * @param param number of milliseconds ( from 4 to 248; step 4); default value 0x008C (140).
  */
-inline void setSsbIfAgcReleaseRate(uint8_t param)
+static inline void setSsbIfAgcReleaseRate(uint8_t param)
 {
     sendProperty(SSB_IF_AGC_RELEASE_RATE, param);
 };
@@ -1441,7 +1445,7 @@ inline void setSsbIfAgcReleaseRate(uint8_t param)
  * @details Large values provide slower attack, and smaller values provide faster attack
  * @param param number of milliseconds ( from 4 to 248; step 4); default value 4.
  */
-inline void setSsbIfAgcAttackRate(uint8_t param)
+static inline void setSsbIfAgcAttackRate(uint8_t param)
 {
     sendProperty(SSB_IF_AGC_ATTACK_RATE, param);
 };
@@ -1452,7 +1456,7 @@ inline void setSsbIfAgcAttackRate(uint8_t param)
  *
  * @return true if the AGC is enabled
  */
-inline bool isAgcEnabled()
+static inline bool isAgcEnabled()
 {
     return !currentAgcStatus.refined.AGCDIS;
 };
@@ -1463,7 +1467,7 @@ inline bool isAgcEnabled()
  *
  * @return uint8_t The current AGC gain index.
  */
-inline uint8_t getAgcGainIndex()
+static inline uint8_t getAgcGainIndex()
 {
     return currentAgcStatus.refined.AGCIDX;
 };
@@ -1487,7 +1491,7 @@ void setAutomaticGainControl(uint8_t AGCDIS, uint8_t AGCIDX);
  * @param uint8_t AGCIDX AGC Index (0 = Minimum attenuation (max gain); 1 – 36 = Intermediate attenuation);
  *                if >greater than 36 - Maximum attenuation (min gain) ).
  */
-inline void setAGC(uint8_t AGCDIS, uint8_t AGCIDX) { setAutomaticGainControl(AGCDIS, AGCIDX); };
+static inline void setAGC(uint8_t AGCDIS, uint8_t AGCIDX) { setAutomaticGainControl(AGCDIS, AGCIDX); };
 
 void setSsbAgcOverrite(uint8_t SSBAGCDIS, uint8_t SSBAGCNDX, uint8_t reserved);
 
@@ -1502,7 +1506,7 @@ void getCurrentReceivedSignalQuality(void);
  *
  * @return uint8_t a value between 0 to 127
  */
-inline uint8_t getCurrentRSSI()
+static inline uint8_t getCurrentRSSI()
 {
     return currentRqsStatus.resp.RSSI;
 };
@@ -1513,7 +1517,7 @@ inline uint8_t getCurrentRSSI()
  *
  * @return uint8_t SNR value in dB (0-127)
  */
-inline uint8_t getCurrentSNR()
+static inline uint8_t getCurrentSNR()
 {
     return currentRqsStatus.resp.SNR;
 };
@@ -1524,7 +1528,7 @@ inline uint8_t getCurrentSNR()
  *
  * @return true if RSSI is low
  */
-inline bool getCurrentRssiDetectLow()
+static inline bool getCurrentRssiDetectLow()
 {
     return currentRqsStatus.resp.RSSIILINT;
 };
@@ -1535,7 +1539,7 @@ inline bool getCurrentRssiDetectLow()
  *
  * @return true if RSSI detected is high
  */
-inline bool getCurrentRssiDetectHigh()
+static inline bool getCurrentRssiDetectHigh()
 {
     return currentRqsStatus.resp.RSSIHINT;
 };
@@ -1546,7 +1550,7 @@ inline bool getCurrentRssiDetectHigh()
  *
  * @return true if SNR detected is low
  */
-inline bool getCurrentSnrDetectLow()
+static inline bool getCurrentSnrDetectLow()
 {
     return currentRqsStatus.resp.SNRLINT;
 };
@@ -1557,7 +1561,7 @@ inline bool getCurrentSnrDetectLow()
  *
  * @return true  if SNR detect is high
  */
-inline bool getCurrentSnrDetectHigh()
+static inline bool getCurrentSnrDetectHigh()
 {
     return currentRqsStatus.resp.SNRHINT;
 };
@@ -1568,7 +1572,7 @@ inline bool getCurrentSnrDetectHigh()
  *
  * @return true if the current channel is valid
  */
-inline bool getCurrentValidChannel()
+static inline bool getCurrentValidChannel()
 {
     return currentRqsStatus.resp.VALID;
 };
@@ -1579,7 +1583,7 @@ inline bool getCurrentValidChannel()
  *
  * @return true or false
  */
-inline bool getCurrentAfcRailIndicator()
+static inline bool getCurrentAfcRailIndicator()
 {
     return currentRqsStatus.resp.AFCRL;
 };
@@ -1592,7 +1596,7 @@ inline bool getCurrentAfcRailIndicator()
  *
  * @return true  if soft mute indicates is engaged.
  */
-inline bool getCurrentSoftMuteIndicator()
+static inline bool getCurrentSoftMuteIndicator()
 {
     return currentRqsStatus.resp.SMUTE;
 };
@@ -1605,7 +1609,7 @@ inline bool getCurrentSoftMuteIndicator()
  *
  * @return uint8_t value (0 to 100)
  */
-inline uint8_t getCurrentStereoBlend()
+static inline uint8_t getCurrentStereoBlend()
 {
     return currentRqsStatus.resp.STBLEND;
 };
@@ -1618,7 +1622,7 @@ inline uint8_t getCurrentStereoBlend()
  *
  * @return true if stereo pilot presence has detected
  */
-inline bool getCurrentPilot()
+static inline bool getCurrentPilot()
 {
     return currentRqsStatus.resp.PILOT;
 };
@@ -1631,7 +1635,7 @@ inline bool getCurrentPilot()
  *
  * @return uint8_t value (0 to 100)
  */
-inline uint8_t getCurrentMultipath()
+static inline uint8_t getCurrentMultipath()
 {
     return currentRqsStatus.resp.MULT;
 };
@@ -1642,7 +1646,7 @@ inline uint8_t getCurrentMultipath()
  *
  * @return uint8_t
  */
-inline uint8_t getCurrentSignedFrequencyOffset()
+static inline uint8_t getCurrentSignedFrequencyOffset()
 {
     return currentRqsStatus.resp.FREQOFF;
 };
@@ -1654,7 +1658,7 @@ inline uint8_t getCurrentSignedFrequencyOffset()
  * @return true
  * @return false
  */
-inline bool getCurrentMultipathDetectLow()
+static inline bool getCurrentMultipathDetectLow()
 {
     return currentRqsStatus.resp.MULTLINT;
 };
@@ -1666,7 +1670,7 @@ inline bool getCurrentMultipathDetectLow()
  * @return true
  * @return false
  */
-inline bool getCurrentMultipathDetectHigh()
+static inline bool getCurrentMultipathDetectHigh()
 {
     return currentRqsStatus.resp.MULTHINT;
 };
@@ -1678,7 +1682,7 @@ inline bool getCurrentMultipathDetectHigh()
  * @return true
  * @return false
  */
-inline bool getCurrentBlendDetectInterrupt()
+static inline bool getCurrentBlendDetectInterrupt()
 {
     return currentRqsStatus.resp.BLENDINT;
 };
@@ -1695,7 +1699,7 @@ inline bool getCurrentBlendDetectInterrupt()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwarePN()
+static inline uint8_t getFirmwarePN()
 {
     return firmwareInfo.resp.PN;
 };
@@ -1706,7 +1710,7 @@ inline uint8_t getFirmwarePN()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwareFWMAJOR()
+static inline uint8_t getFirmwareFWMAJOR()
 {
     return firmwareInfo.resp.FWMAJOR;
 };
@@ -1717,7 +1721,7 @@ inline uint8_t getFirmwareFWMAJOR()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwareFWMINOR()
+static inline uint8_t getFirmwareFWMINOR()
 {
     return firmwareInfo.resp.FWMINOR;
 };
@@ -1728,7 +1732,7 @@ inline uint8_t getFirmwareFWMINOR()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwarePATCHH()
+static inline uint8_t getFirmwarePATCHH()
 {
     return firmwareInfo.resp.PATCHH;
 };
@@ -1739,7 +1743,7 @@ inline uint8_t getFirmwarePATCHH()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwarePATCHL()
+static inline uint8_t getFirmwarePATCHL()
 {
     return firmwareInfo.resp.PATCHL;
 };
@@ -1750,7 +1754,7 @@ inline uint8_t getFirmwarePATCHL()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwareCMPMAJOR()
+static inline uint8_t getFirmwareCMPMAJOR()
 {
     return firmwareInfo.resp.CMPMAJOR;
 }; //!<  RESP6 -  Returns the Component Major Revision (ASCII).
@@ -1761,7 +1765,7 @@ inline uint8_t getFirmwareCMPMAJOR()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwareCMPMINOR()
+static inline uint8_t getFirmwareCMPMINOR()
 {
     return firmwareInfo.resp.CMPMINOR;
 };
@@ -1772,7 +1776,7 @@ inline uint8_t getFirmwareCMPMINOR()
  *
  * @return uint8_t
  */
-inline uint8_t getFirmwareCHIPREV()
+static inline uint8_t getFirmwareCHIPREV()
 {
     return firmwareInfo.resp.CHIPREV;
 };
@@ -1788,7 +1792,7 @@ void volumeUp();
  * @details Returns the current volume level.
  * @return uint8_t
  */
-inline uint8_t getCurrentVolume() { return volume; };
+static inline uint8_t getCurrentVolume() { return volume; };
 
 /**
  * @ingroup group13 Audio volume
@@ -1796,14 +1800,14 @@ inline uint8_t getCurrentVolume() { return volume; };
  * @details Same volumeUp()
  * @see volumeUp
  */
-inline void setVolumeUp() { volumeUp(); };
+static inline void setVolumeUp() { volumeUp(); };
 /**
  * @ingroup group13 Audio volume
  * @brief Set the Volume Down
  * @details Same volumeDown()
  * @return voi
  */
-inline void setVolumeDown() { volumeDown(); };
+static inline void setVolumeDown() { volumeDown(); };
 
 /**
  * @ingroup group13 Digital Audio setup
@@ -1823,7 +1827,7 @@ inline void setVolumeDown() { volumeDown(); };
  * @see setAM(), setFM(), setSSB().
  * @param audioMode One of the values options above
  */
-inline void setAudioMode(uint8_t audioMode)
+static inline void setAudioMode(uint8_t audioMode)
 {
     currentAudioMode = audioMode;
 };
@@ -1835,7 +1839,7 @@ inline void setAudioMode(uint8_t audioMode)
  *
  * @param value Delay in micro-seconds
  */
-inline void setAmDelayNB(uint16_t value)
+static inline void setAmDelayNB(uint16_t value)
 {
     sendProperty(AM_NB_DELAY, value);
 }
@@ -1857,7 +1861,7 @@ void setFM(uint16_t fromFreq, uint16_t toFreq, uint16_t initialFreq, uint16_t st
  *
  * @param parameter 1 or 2 (default 1 - USA)
  */
-inline void setFMDeEmphasis(uint8_t parameter)
+static inline void setFMDeEmphasis(uint8_t parameter)
 {
     sendProperty(FM_DEEMPHASIS, parameter);
 };
@@ -1873,7 +1877,7 @@ inline void setFMDeEmphasis(uint8_t parameter)
  *
  * @param smattn Maximum attenuation to apply when in soft mute
  */
-inline void setFmSoftMuteMaxAttenuation(uint8_t smattn)
+static inline void setFmSoftMuteMaxAttenuation(uint8_t smattn)
 {
     sendProperty(FM_SOFT_MUTE_MAX_ATTENUATION, smattn);
 };
@@ -1883,7 +1887,7 @@ inline void setFmSoftMuteMaxAttenuation(uint8_t smattn)
  * @details Sets the threshold for detecting impulses in dB above the noise floor. The CTS bit (and optional interrupt) is set when it is safe to send the next command.
  * @param parameter (from 0 to 90. default is 10)
  */
-inline void setFmNoiseBlankThreshold(uint16_t parameter)
+static inline void setFmNoiseBlankThreshold(uint16_t parameter)
 {
     sendProperty(FM_NB_DETECT_THRESHOLD, parameter);
 };
@@ -1900,7 +1904,7 @@ inline void setFmNoiseBlankThreshold(uint16_t parameter)
  * @param nb_interval Interval in micro-seconds that original samples are replaced by interpolated clean samples. Default value is 55 μs.
  * @param nb_irr_filter Sets the bandwidth of the noise floor estimator. Default value is 300.
  */
-inline void setFmNoiseBlank()
+static inline void setFmNoiseBlank()
 {
 		uint16_t nb_rate = 64;
 		uint16_t nb_interval = 55;
@@ -1915,7 +1919,7 @@ inline void setFmNoiseBlank()
  * @details Interval in micro-seconds that original samples are replaced by interpolated clean samples.
  * @param parameter ( from 8 to 48. default value is 24)
  */
-inline void setFmNoiseBlankInterval(uint16_t parameter)
+static inline void setFmNoiseBlankInterval(uint16_t parameter)
 {
     sendProperty(FM_NB_INTERVAL, parameter);
 };
@@ -1926,7 +1930,7 @@ inline void setFmNoiseBlankInterval(uint16_t parameter)
  *
  * @param parameter ( from 1 to 64. default value is 64)
  */
-inline void setFmNoiseBlankRate(uint16_t parameter)
+static inline void setFmNoiseBlankRate(uint16_t parameter)
 {
     sendProperty(FM_NB_RATE, parameter);
 };
@@ -1936,7 +1940,7 @@ inline void setFmNoiseBlankRate(uint16_t parameter)
  * @details Delay in micro-seconds before applying impulse blanking to the original samples.
  * @param parameter ( from 125 to 219. default value is 170)
  */
-inline void setFmNoiseBlankDelay(uint16_t parameter)
+static inline void setFmNoiseBlankDelay(uint16_t parameter)
 {
     sendProperty(FM_NB_DELAY, parameter);
 };
@@ -1946,7 +1950,7 @@ inline void setFmNoiseBlankDelay(uint16_t parameter)
  * @details Sets the bandwidth of the noise floor estimator.
  * @param parameter (from 300 to 1600. default value is 300)
  */
-inline void setFmNoiseBlank_IIR_Filter(uint16_t parameter)
+static inline void setFmNoiseBlank_IIR_Filter(uint16_t parameter)
 {
     sendProperty(FM_NB_IIR_FILTER, parameter);
 }
@@ -1958,7 +1962,7 @@ inline void setFmNoiseBlank_IIR_Filter(uint16_t parameter)
  *
  * @param parameter 1 = enable or 0 = disable
  */
-inline void setAMDeEmphasis(uint8_t parameter)
+static inline void setAMDeEmphasis(uint8_t parameter)
 {
     sendProperty(AM_DEEMPHASIS, parameter);
 };
@@ -1974,7 +1978,7 @@ inline void setAMDeEmphasis(uint8_t parameter)
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0);
  * @param parameter  the valid values are 1–5 (default 1).
  */
-inline void setAMSoftMuteSlop(uint8_t parameter)
+static inline void setAMSoftMuteSlop(uint8_t parameter)
 {
     sendProperty(AM_SOFT_MUTE_SLOPE, parameter);
 };
@@ -1988,7 +1992,7 @@ inline void setAMSoftMuteSlop(uint8_t parameter)
  * @see Si47XX PRORAMMING GUIDE; AN332 (REV 1.0);
  * @param parameter  The valid values are 1-255  ( Default is ~64 - [64 x 4.35 = 278] )
  */
-inline void setAMSoftMuteRate(uint8_t parameter)
+static inline void setAMSoftMuteRate(uint8_t parameter)
 {
     sendProperty(AM_SOFT_MUTE_RATE, parameter);
 };
@@ -2002,7 +2006,7 @@ inline void setAMSoftMuteRate(uint8_t parameter)
  * @see Si47XX PROAMMING GUIDE; AN332 (REV 1.0);
  * @param parameter  0-63 (default is 8)
  */
-inline void setAMSoftMuteSnrThreshold(uint8_t parameter)
+static inline void setAMSoftMuteSnrThreshold(uint8_t parameter)
 {
     sendProperty(AM_SOFT_MUTE_SNR_THRESHOLD, parameter);
 };
@@ -2015,7 +2019,7 @@ inline void setAMSoftMuteSnrThreshold(uint8_t parameter)
  * @see Si47XX PROAMMING GUIDE; AN332 (REV 1.0);
  * @param parameter  1–32767
  */
-inline void setAMSoftMuteReleaseRate(uint8_t parameter)
+static inline void setAMSoftMuteReleaseRate(uint8_t parameter)
 {
     sendProperty(AM_SOFT_MUTE_RELEASE_RATE, parameter);
 };
@@ -2028,7 +2032,7 @@ inline void setAMSoftMuteReleaseRate(uint8_t parameter)
  * @see Si47XX PROAMMING GUIDE; AN332 (REV 1.0);
  * @param parameter  1–32767 (The default is 8192 (approximately 8000 dB/s)
  */
-inline void setAMSoftMuteAttackRate(uint16_t parameter)
+static inline void setAMSoftMuteAttackRate(uint16_t parameter)
 {
     sendProperty(AM_SOFT_MUTE_ATTACK_RATE, parameter);
 };
@@ -2041,7 +2045,7 @@ inline void setAMSoftMuteAttackRate(uint16_t parameter)
  * @see Si47XX PROAMMING GUIDE; AN332 (REV 1.2); page 167
  * @param parameter Range: 4–248 (The default is 0x04)
  */
-inline void setAmAgcAttackRate(uint16_t parameter)
+static inline void setAmAgcAttackRate(uint16_t parameter)
 {
     sendProperty(AM_AGC_ATTACK_RATE, parameter);
 };
@@ -2054,7 +2058,7 @@ inline void setAmAgcAttackRate(uint16_t parameter)
  * @see Si47XX PROAMMING GUIDE; AN332 (REV 1.2); page 168
  * @param parameter Range: 4–248 (The default is 0x8C)
  */
-inline void setAmAgcReleaseRate(uint16_t parameter)
+static inline void setAmAgcReleaseRate(uint16_t parameter)
 {
     sendProperty(AM_AGC_RELEASE_RATE, parameter);
 };
@@ -2067,7 +2071,7 @@ inline void setAmAgcReleaseRate(uint16_t parameter)
  * @see AN332 REV 0.8 UNIVERSAL PROGRAMMING GUIDE; page 29
  * @param parameter Range: 4–248 (The default is 0x04)
  */
-inline void setSsbAgcAttackRate(uint16_t parameter)
+static inline void setSsbAgcAttackRate(uint16_t parameter)
 {
     sendProperty(SSB_RF_AGC_ATTACK_RATE, parameter);
 };
@@ -2080,7 +2084,7 @@ inline void setSsbAgcAttackRate(uint16_t parameter)
  * @see AN332 REV 0.8 UNIVERSAL PROGRAMMING GUIDE; page 29
  * @param parameter Range: 4–248 (The default is 0x18)
  */
-inline void setSsbAgcReleaseRate(uint16_t parameter)
+static inline void setSsbAgcReleaseRate(uint16_t parameter)
 {
     sendProperty(SSB_RF_AGC_RELEASE_RATE, parameter);
 };
@@ -2099,7 +2103,7 @@ inline void setSsbAgcReleaseRate(uint16_t parameter)
  * @param MIN_GAIN_INDEX Values below 19 have minimal sensitivity improvement; Higher values degrade sensitivity, but improve U/D.
  * @param ATTN_BACKUP ???
  */
-inline void setAMFrontEndAgcControl(uint8_t MIN_GAIN_INDEX, uint8_t ATTN_BACKUP)
+static inline void setAMFrontEndAgcControl(uint8_t MIN_GAIN_INDEX, uint8_t ATTN_BACKUP)
 {
     si47x_frontend_agc_control param;
 
@@ -2123,7 +2127,7 @@ inline void setAMFrontEndAgcControl(uint8_t MIN_GAIN_INDEX, uint8_t ATTN_BACKUP)
  * @param nb_irr_filter Sets the bandwidth of the noise floor estimator. Default value is 300.
  *
  */
-inline void setAmNoiseBlank()
+static inline void setAmNoiseBlank()
 {
 		uint16_t nb_rate = 64;
 		uint16_t nb_interval = 55;
@@ -2138,7 +2142,7 @@ inline void setAmNoiseBlank()
  *
  * @return true if the current function is FM (FM_TUNE_FREQ).
  */
-inline bool isCurrentTuneFM()
+static inline bool isCurrentTuneFM()
 {
     return (currentTune == FM_TUNE_FREQ);
 }
@@ -2150,7 +2154,7 @@ inline bool isCurrentTuneFM()
  *
  * @return true if the current function is AM (AM_TUNE_FREQ).
  */
-inline bool isCurrentTuneAM()
+static inline bool isCurrentTuneAM()
 {
     return (currentTune == AM_TUNE_FREQ);
 }
@@ -2162,7 +2166,7 @@ inline bool isCurrentTuneAM()
  *
  * @return true if the current function is SSB (SSB_TUNE_FREQ).
  */
-inline bool isCurrentTuneSSB()
+static inline bool isCurrentTuneSSB()
 {
     return (currentTune == SSB_TUNE_FREQ);
 }
@@ -2182,7 +2186,7 @@ void setBandwidth(uint8_t AMCHFLT, uint8_t AMPLFLT);
  *
  * @param filter_value
  */
-inline void setFmBandwidth(uint8_t filter_value)
+static inline void setFmBandwidth(uint8_t filter_value)
 {
     sendProperty(FM_CHANNEL_FILTER, filter_value);
 }
@@ -2193,7 +2197,7 @@ inline void setFmBandwidth(uint8_t filter_value)
  *
  * @retrn uint8_t
  */
-inline uint8_t getTuneFrequecyFast()
+static inline uint8_t getTuneFrequecyFast()
 {
     return currentFrequencyParams.arg.FAST;
 };
@@ -2205,7 +2209,7 @@ inline uint8_t getTuneFrequecyFast()
  *
  * @param FAST
  */
-inline void setTuneFrequencyFast(uint8_t FAST)
+static inline void setTuneFrequencyFast(uint8_t FAST)
 {
     currentFrequencyParams.arg.FAST = FAST;
 };
@@ -2216,7 +2220,7 @@ inline void setTuneFrequencyFast(uint8_t FAST)
  *
  * @return unt8_t
  */
-inline uint8_t getTuneFrequecyFreeze()
+static inline uint8_t getTuneFrequecyFreeze()
 {
     return currentFrequencyParams.arg.FREEZE;
 };
@@ -2228,7 +2232,7 @@ inline uint8_t getTuneFrequecyFreeze()
  *
  * @param FREEZE
  */
-inline void setTuneFrequencyFreze(uint8_t FREEZE)
+static inline void setTuneFrequencyFreze(uint8_t FREEZE)
 {
     currentFrequencyParams.arg.FREEZE = FREEZE;
 };
@@ -2244,7 +2248,7 @@ void frequencyDown();
  * @details Same frequencyUp
  * @see frequencyUp
  */
-inline void setFrequencyUp() { frequencyUp(); };
+static inline void setFrequencyUp() { frequencyUp(); };
 
 /**
  * @ingroup   group08 Tune Frequency
@@ -2252,7 +2256,7 @@ inline void setFrequencyUp() { frequencyUp(); };
  * @details same frequencyDown
  * @see frequencyDown
  */
-inline void setFrequencyDown() { frequencyDown(); };
+static inline void setFrequencyDown() { frequencyDown(); };
 
 void getFirmware(void);
 
@@ -2268,7 +2272,7 @@ void seekStation(uint8_t SEEKUP, uint8_t WRAP); // See WRAP parameter
  *
  * @param time_in_ms time in milliseconds.
  */
-inline void setMaxSeekTime(long time_in_ms)
+static inline void setMaxSeekTime(long time_in_ms)
 {
     maxSeekTime = time_in_ms;
 };
@@ -2286,7 +2290,7 @@ void seekStationProgress_t(void (*showFunc)(uint16_t f), bool (*stopSeking)(), u
  * @see seekStation, seekStationProgress, setSeekAmLimits setSeekFmLimits
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 124, 137, 139, 278
  */
-inline void seekStationUp()
+static inline void seekStationUp()
 {
     seekStationProgress(NULL, SEEK_UP);
 };
@@ -2299,7 +2303,7 @@ inline void seekStationUp()
  * @see seekStation, seekStationProgress, setSeekAmLimits, setSeekFmLimits
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 124, 137, 139, 278
  */
-inline void seekStationDown()
+static inline void seekStationDown()
 {
     seekStationProgress(NULL, SEEK_DOWN);
 };
@@ -2320,7 +2324,7 @@ void setSeekAmSpacing(uint16_t spacing);
  * @see setSeekAmSNRThreshold
  * @param value
  */
-void inline setSeekAmSrnThreshold(uint16_t value) { sendProperty(AM_SEEK_SNR_THRESHOLD, value); }; // Wrong name! Will be removed later
+void static inline setSeekAmSrnThreshold(uint16_t value) { sendProperty(AM_SEEK_SNR_THRESHOLD, value); }; // Wrong name! Will be removed later
 
 /**
  * @ingroup group08 Seek
@@ -2330,7 +2334,7 @@ void inline setSeekAmSrnThreshold(uint16_t value) { sendProperty(AM_SEEK_SNR_THR
  * @details If the value is zero then SNR threshold is not considered when doing a seek. Default value is 5 dB.
  * @see Si47XX PROGRAMMING GUIDE;  (REV 1.0); page 127
  */
-void inline setSeekAmSNRThreshold(uint16_t value) { sendProperty(AM_SEEK_SNR_THRESHOLD, value); }; // Fixing the function name
+void static inline setSeekAmSNRThreshold(uint16_t value) { sendProperty(AM_SEEK_SNR_THRESHOLD, value); }; // Fixing the function name
 
 void setSeekAmRssiThreshold(uint16_t value);
 
@@ -2345,7 +2349,7 @@ void setSeekFmSpacing(uint16_t spacing);
  * @see setSeekFmSNRThreshold
  * @param value
  */
-void inline setSeekFmSrnThreshold(uint16_t value) { sendProperty(FM_SEEK_TUNE_SNR_THRESHOLD, value); }; // Wrong name. Will be removed later
+void static inline setSeekFmSrnThreshold(uint16_t value) { sendProperty(FM_SEEK_TUNE_SNR_THRESHOLD, value); }; // Wrong name. Will be removed later
 
 /**
  * @ingroup group08 Seek
@@ -2357,7 +2361,7 @@ void inline setSeekFmSrnThreshold(uint16_t value) { sendProperty(FM_SEEK_TUNE_SN
  *
  * @param value between 0 and 127.
  */
-void inline setSeekFmSNRThreshold(uint16_t value) { sendProperty(FM_SEEK_TUNE_SNR_THRESHOLD, value); }; // Fixing the function name
+void static inline setSeekFmSNRThreshold(uint16_t value) { sendProperty(FM_SEEK_TUNE_SNR_THRESHOLD, value); }; // Fixing the function name
 
 void setSeekFmRssiThreshold(uint16_t value);
 
@@ -2379,7 +2383,7 @@ void RdsInit();
  * @details This method is called by setRdsConfig()
  * @see setRdsConfig()
  */
-void inline clearRdsBuffer() { RdsInit(); };
+void static inline clearRdsBuffer() { RdsInit(); };
 void setRdsIntSource(uint8_t RDSRECV, uint8_t RDSSYNCLOST, uint8_t RDSSYNCFOUND, uint8_t RDSNEWBLOCKA, uint8_t RDSNEWBLOCKB);
 void getRdsStatus_t(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY);
 /**
@@ -2391,7 +2395,7 @@ void getRdsStatus_t(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY);
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 55 and 77
  * @see getRdsStatus
  */
-inline void rdsBeginQuery() { getRdsStatus_t(0, 0, 0); };
+static inline void rdsBeginQuery() { getRdsStatus_t(0, 0, 0); };
 
 /**
  * @ingroup group16 RDS
@@ -2399,7 +2403,7 @@ inline void rdsBeginQuery() { getRdsStatus_t(0, 0, 0); };
  * @details if FIFO is 1, it means the minimum number of groups was filled
  * @return true if minimum number of groups was filled.
  */
-inline bool getRdsReceived()
+static inline bool getRdsReceived()
 {
     return currentRdsStatus.resp.RDSRECV;
 };
@@ -2410,7 +2414,7 @@ inline bool getRdsReceived()
  * @details returns true (1) if Lost RDS synchronization is detected.
  * @return true if Lost RDS synchronization detected.
  */
-inline bool getRdsSyncLost()
+static inline bool getRdsSyncLost()
 {
     return currentRdsStatus.resp.RDSSYNCLOST;
 };
@@ -2421,7 +2425,7 @@ inline bool getRdsSyncLost()
  * @details return true if found RDS synchronization
  * @return true if found RDS synchronization
  */
-inline bool getRdsSyncFound()
+static inline bool getRdsSyncFound()
 {
     return currentRdsStatus.resp.RDSSYNCFOUND;
 };
@@ -2433,7 +2437,7 @@ inline bool getRdsSyncFound()
  * @details Returns true if valid Block A data has been received.
  * @return true or false
  */
-inline bool getRdsNewBlockA()
+static inline bool getRdsNewBlockA()
 {
     return currentRdsStatus.resp.RDSNEWBLOCKA;
 };
@@ -2444,7 +2448,7 @@ inline bool getRdsNewBlockA()
  * @details Returns true if valid Block B data has been received.
  * @return true or false
  */
-inline bool getRdsNewBlockB()
+static inline bool getRdsNewBlockB()
 {
     return currentRdsStatus.resp.RDSNEWBLOCKB;
 };
@@ -2455,7 +2459,7 @@ inline bool getRdsNewBlockB()
  * @details Returns true if RDS currently synchronized.
  * @return true or false
  */
-inline bool getRdsSync()
+static inline bool getRdsSync()
 {
     return currentRdsStatus.resp.RDSSYNC;
 };
@@ -2466,7 +2470,7 @@ inline bool getRdsSync()
  * @details Returns true if one or more RDS groups discarded due to FIFO overrun.
  * @return true or false
  */
-inline bool getGroupLost()
+static inline bool getGroupLost()
 {
     return currentRdsStatus.resp.GRPLOST;
 };
@@ -2477,7 +2481,7 @@ inline bool getGroupLost()
  * @details Return the number of RDS FIFO used
  * @return uint8_t Total RDS FIFO used
  */
-inline uint8_t getNumRdsFifoUsed()
+static inline uint8_t getNumRdsFifoUsed()
 {
     return currentRdsStatus.resp.RDSFIFOUSED;
 };
@@ -2488,7 +2492,7 @@ inline uint8_t getNumRdsFifoUsed()
  * @details Return the number of RDS FIFO used
  * @param value from 0 to 25. Default value is 0.
  */
-inline void setFifoCount(uint16_t value)
+static inline void setFifoCount(uint16_t value)
 {
     sendProperty(FM_RDS_INT_FIFO_COUNT, value);
 };
@@ -2499,7 +2503,7 @@ inline void setFifoCount(uint16_t value)
  * @see resetEndIndicatorGroupA
  * @return true or false
  */
-inline bool getEndIndicatorGroupA()
+static inline bool getEndIndicatorGroupA()
 {
     return rdsEndGroupA;
 }
@@ -2509,7 +2513,7 @@ inline bool getEndIndicatorGroupA()
  * @brief Resets 0xD or 0xA special characters condition (makes it false)
  * @see getEndIndicatorGroupA
  */
-inline void resetEndIndicatorGroupA()
+static inline void resetEndIndicatorGroupA()
 {
     rdsEndGroupA = false;
 }
@@ -2520,7 +2524,7 @@ inline void resetEndIndicatorGroupA()
  * @see resetEndIndicatorGroupB
  * @return true or false
  */
-inline bool getEndIndicatorGroupB()
+static inline bool getEndIndicatorGroupB()
 {
     return rdsEndGroupB;
 }
@@ -2530,7 +2534,7 @@ inline bool getEndIndicatorGroupB()
  * @brief Resets 0xD or 0xA special characters condition (makes it false)
  * @see getEndIndicatorGroupB
  */
-inline void resetEndIndicatorGroupB()
+static inline void resetEndIndicatorGroupB()
 {
     rdsEndGroupB = false;
 }
@@ -2546,7 +2550,7 @@ inline void resetEndIndicatorGroupB()
  *
  * @see SI4735::getRdsStatus(uint8_t INTACK, uint8_t MTFIFO, uint8_t STATUSONLY)
  */
-inline void getRdsStatus()
+static inline void getRdsStatus()
 {
     getRdsStatus_t(0, 0, 0);
 }
@@ -2557,7 +2561,7 @@ inline void getRdsStatus()
  * @details  Clear RDS Receive FIFO.
  * @see getRdsStatus
  */
-inline void rdsClearFifo()
+static inline void rdsClearFifo()
 {
     getRdsStatus_t(0, 1, 0);
 }
@@ -2568,7 +2572,7 @@ inline void rdsClearFifo()
  * @details  INTACK Interrupt Acknowledge; 0 = RDSINT status preserved. 1 = Clears RDSINT.
  * @see getRdsStatus
  */
-inline void rdsClearInterrupt()
+static inline void rdsClearInterrupt()
 {
     getRdsStatus_t(1, 0, 0);
 }
@@ -2595,7 +2599,7 @@ bool getRdsAllData(char **stationName, char **stationInformation, char **program
  * @return char* should return a string with the station name. However, some stations send other kind of messages
  * @see getRdsText0A
  */
-inline char *getRdsStationName(void) { return getRdsText0A(); };
+static inline char *getRdsStationName(void) { return getRdsText0A(); };
 
 /**
  * @ingroup group16
@@ -2605,7 +2609,7 @@ inline char *getRdsStationName(void) { return getRdsText0A(); };
  * @return char array with the program information (63 bytes)
  * @see getRdsText2A
  */
-inline char *getRdsProgramInformation(void) { return getRdsText2A(); };
+static inline char *getRdsProgramInformation(void) { return getRdsText2A(); };
 
 /**
  * @ingroup group16
@@ -2614,7 +2618,7 @@ inline char *getRdsProgramInformation(void) { return getRdsText2A(); };
  * @return char array with the Text of Station Information (33 bytes)
  * @see getRdsReady
  */
-inline char *getRdsStationInformation(void) { return getRdsText2B(); };
+static inline char *getRdsStationInformation(void) { return getRdsText2B(); };
 
 void mjdConverter(uint32_t mjd, uint32_t *year, uint32_t *month, uint32_t *day);
 char *getRdsTime(void);
@@ -2638,7 +2642,7 @@ void setSSBSidebandCutoffFilter(uint8_t SBCUTFLT); // Fixing the function name
  * @see setSSBSidebandCutoffFilter
  * @param SBCUTFLT
  */
-void inline setSBBSidebandCutoffFilter(uint8_t SBCUTFLT) { setSSBSidebandCutoffFilter(SBCUTFLT); }; // Wrong name! will be removed later.
+void static inline setSBBSidebandCutoffFilter(uint8_t SBCUTFLT) { setSSBSidebandCutoffFilter(SBCUTFLT); }; // Wrong name! will be removed later.
 
 void setSSBAvcDivider(uint8_t AVC_DIVIDER);
 void setSSBDspAfc(uint8_t DSP_AFCDIS);
@@ -2669,7 +2673,7 @@ void ssbPowerUp();
  * @see MAX_DELAY_AFTER_POWERUP
  * @param ms delay in ms
  */
-inline void setMaxDelayPowerUp(uint16_t ms)
+static inline void setMaxDelayPowerUp(uint16_t ms)
 {
     maxDelayAfterPouwerUp = ms;
 }
@@ -2685,7 +2689,7 @@ inline void setMaxDelayPowerUp(uint16_t ms)
  * @see  MAX_DELAY_AFTER_POWERUP
  * @param ms
  */
-inline void setMaxDelaySetFrequency(uint16_t ms)
+static inline void setMaxDelaySetFrequency(uint16_t ms)
 {
     maxDelaySetFrequency = ms;
 }
@@ -2715,7 +2719,7 @@ inline void setMaxDelaySetFrequency(uint16_t ms)
  *             For AM, 1 (1kHz) to 1000 (1MHz) are valid values.
  *             For FM 5 (50kHz), 10 (100kHz) and 100 (1MHz) are valid values.
  */
-inline void setFrequencyStep(uint16_t step)
+static inline void setFrequencyStep(uint16_t step)
 {
     currentStep = step;
 }
@@ -2731,7 +2735,7 @@ inline void setFrequencyStep(uint16_t step)
  *
  * @see getFrequency()
  */
-inline uint16_t getCurrentFrequency()
+static inline uint16_t getCurrentFrequency()
 {
     return currentWorkFrequency;
 }
@@ -2742,7 +2746,7 @@ inline uint16_t getCurrentFrequency()
  * @brief Gets the current status  of the Si47XX (AM, FM or SSB)
  * @see Si47XX PROGRAMMING GUIDE; AN332 (REV 1.0); pages 73 (FM) and 139 (AM)
  */
-inline void getStatus_t()
+static inline void getStatus_t()
 {
     getStatus(0, 1);
 }
@@ -2761,7 +2765,7 @@ void setDeviceOtherI2CAddress(uint8_t i2cAddr);
  * @ingroup group18 MCU I2C Speed
  * @brief Sets I2C bus to 10kHz
  */
-inline void setI2CLowSpeedMode(void)
+static inline void setI2CLowSpeedMode(void)
 {
 //    Wire.setClock(10000);
 };
@@ -2771,7 +2775,7 @@ inline void setI2CLowSpeedMode(void)
  *
  * @brief Sets I2C bus to 100kHz
  */
-inline void setI2CStandardMode(void) { 
+static inline void setI2CStandardMode(void) { 
 //Wire.setClock(100000); 
 };
 
@@ -2780,7 +2784,7 @@ inline void setI2CStandardMode(void) {
  *
  * @brief Sets I2C bus to 400kHz
  */
-inline void setI2CFastMode(void)
+static inline void setI2CFastMode(void)
 {
 //    Wire.setClock(400000);
 };
@@ -2793,7 +2797,7 @@ inline void setI2CFastMode(void)
  *
  * @param value in Hz. For example: The values 500000 sets the bus to 500kHz.
  */
-inline void setI2CFastModeCustom(long value) { 
+static inline void setI2CFastModeCustom(long value) { 
 //Wire.setClock(value); 
 };
 
@@ -2810,7 +2814,7 @@ inline void setI2CFastModeCustom(long value) {
  * @see setHardwareAudioMute
  * @param pin if 0 or greater, sets the MCU digital pin that controls the external circuit.
  */
-inline void setAudioMuteMcuPin(int8_t pin)
+static inline void setAudioMuteMcuPin(int8_t pin)
 {
 };
 
@@ -2824,10 +2828,11 @@ inline void setAudioMuteMcuPin(int8_t pin)
  *
  * @param on  True or false
  */
-inline void setHardwareAudioMute(bool on)
+static inline void setHardwareAudioMute(bool on)
 {
     HAL_GPIO_WritePin(GPIO_SI473X_MUTE, GPIO_SI473X_PIN_MUTE, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
-    delayMicroseconds(300);
+		 HAL_GPIO_WritePin(AMP_EN_GPIO_Port, AMP_EN_Pin, on ? GPIO_PIN_RESET : GPIO_PIN_SET);
+        HAL_Delay(1);
 }
 
 void convertToChar(uint16_t value, char *strValue, uint8_t len, uint8_t dot, uint8_t separator, bool remove_leading_zeros);
